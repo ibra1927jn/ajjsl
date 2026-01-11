@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Picker, OrchardSettings, WarehouseState, Bin, MapPin, Message, Role, Team } from '../types';
 
@@ -11,9 +12,10 @@ interface HarvestContextType {
     updatePickerStats: (id: string, bucketsChange: number) => void;
     toggleDefect: (id: string, defect: keyof Picker['defects']) => void;
     warehouse: WarehouseState;
-    updateWarehouse: (type: keyof WarehouseState, change: number) => void;
+    updateWarehouse: (type: Exclude<keyof WarehouseState, 'managerName'>, change: number) => void;
     activeBin: Bin;
     updateActiveBin: (buckets: number) => void;
+    scanNewBin: () => void;
     mapPins: MapPin[];
     messages: Message[];
     sendMessage: (msg: Omit<Message, 'id' | 'timestamp'>) => void;
@@ -25,84 +27,110 @@ interface HarvestContextType {
 const HarvestContext = createContext<HarvestContextType | undefined>(undefined);
 
 export const HarvestProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    // 1. Configuración Global
-    const [settings, setSettings] = useState<OrchardSettings>({
-        minWage: 23.50,
-        bucketRate: 8.50,
-        targetRate: 45,
-        variety: 'Santina',
-        orchardName: 'Block 4B',
-        dailyGoal: 15000,
-        harvestedTotal: 12450
+    // --- STATE INITIALIZATION WITH PERSISTENCE ---
+    const [settings, setSettings] = useState<OrchardSettings>(() => {
+        const saved = localStorage.getItem('harvest_settings');
+        return saved ? JSON.parse(saved) : {
+            minWage: 23.50,
+            bucketRate: 7.00,
+            targetRate: 45,
+            variety: 'Santina',
+            orchardName: 'Block 4B',
+            dailyGoal: 16000,
+            harvestedTotal: 12500
+        };
     });
 
-    const [isOffline, setIsOffline] = useState(false);
+    const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
-    // 2. Teams Data
     const [teams] = useState<Team[]>([
-        { id: 'T01', leaderName: 'John Doe', block: '4B', tons: 8.5, avgQuality: 98 },
-        { id: 'T02', leaderName: 'Jane Smith', block: '5A', tons: 7.2, avgQuality: 94 },
+        { id: 'T01', leaderName: 'Sarah Jenkins', block: '2C', tons: 1.8, avgQuality: 98 },
+        { id: 'T02', leaderName: 'Emily Clark', block: '1B', tons: 1.6, avgQuality: 95 },
+        { id: 'T03', leaderName: 'Mike Ross', block: '4A', tons: 1.4, avgQuality: 85 },
     ]);
 
-    // 3. Pickers
-    const [pickers, setPickers] = useState<Picker[]>([
-        { 
-            id: 'P01', name: 'Liam O.', harnessId: 'H-402', buckets: 45, hours: 4, qualityScore: 98, 
-            defects: { spurs: false, damage: false, small: false, color: false }, 
-            status: 'active', row: '12A', lastActive: new Date(), teamId: 'T01'
-        },
-        { 
-            id: 'P02', name: 'Sarah J.', harnessId: 'H-399', buckets: 12, hours: 4, qualityScore: 75, 
-            defects: { spurs: true, damage: true, small: false, color: false }, 
-            status: 'coaching_needed', row: '12A', lastActive: new Date(), teamId: 'T01'
-        },
-        { 
-            id: 'P03', name: 'Mike T.', harnessId: 'H-410', buckets: 60, hours: 4, qualityScore: 92, 
-            defects: { spurs: false, damage: false, small: false, color: true }, 
-            status: 'active', row: '12B', lastActive: new Date(), teamId: 'T02'
-        },
-    ]);
+    const [pickers, setPickers] = useState<Picker[]>(() => {
+        const saved = localStorage.getItem('harvest_pickers');
+        return saved ? JSON.parse(saved) : [
+            { 
+                id: '402', name: 'Liam O.', harnessId: 'HN-402', buckets: 45, hours: 4, qualityScore: 98, qcPerformed: 12, currentRow: '12', treesDone: 45,
+                defects: { spurs: false, damage: false, small: false, color: false }, 
+                status: 'active', rateStatus: 'green', lastActive: new Date(), teamId: 'T01'
+            },
+            { 
+                id: '399', name: 'Sarah J.', harnessId: 'HN-399', buckets: 38, hours: 4, qualityScore: 95, qcPerformed: 8, currentRow: '12', treesDone: 38,
+                defects: { spurs: true, damage: true, small: false, color: false }, 
+                status: 'active', rateStatus: 'green', lastActive: new Date(), teamId: 'T01'
+            },
+            { 
+                id: '410', name: 'Mike T.', harnessId: 'HN-410', buckets: 12, hours: 3.5, qualityScore: 82, qcPerformed: 5, currentRow: '14', treesDone: 10,
+                defects: { spurs: false, damage: false, small: false, color: true }, 
+                status: 'active', rateStatus: 'red', lastActive: new Date(), teamId: 'T01'
+            },
+        ];
+    });
 
-    // 4. Inventario Crítico
     const [warehouse, setWarehouse] = useState<WarehouseState>({
         emptyBins: 15,
-        binsWithEmptyBuckets: 4,
-        fullCherryBins: 28
+        binsWithEmptyBuckets: 8,
+        fullCherryBins: 28,
+        managerName: "Dave S."
     });
 
-    // 5. Bin Activa (Runner)
     const [activeBin, setActiveBin] = useState<Bin>({
-        id: '40925',
+        id: '4092',
         fillLevel: 45,
         status: 'collecting',
         type: 'standard',
         location: { x: 0, y: 0 },
-        startTime: new Date(Date.now() - 1000 * 60 * 45) // 45 min ago
+        startTime: new Date(Date.now() - 1000 * 60 * 75)
     });
 
-    // 6. Mapa Logístico
     const [mapPins] = useState<MapPin[]>([
         { id: 'b1', type: 'bin_full', x: 20, y: 30, alert: true, minutesWaiting: 22, label: '#40901' }, 
         { id: 't1', type: 'tractor', x: 45, y: 50, label: 'T-01' },
         { id: 'tl1', type: 'picker_group', x: 60, y: 25, label: 'Crew A' },
-        { id: 'b2', type: 'bin_full', x: 80, y: 70, alert: false, minutesWaiting: 5, label: '#40905' },
     ]);
 
     const [messages, setMessages] = useState<Message[]>([
-        { id: '1', sender: 'Mike (Runner)', role: Role.RUNNER, content: 'Truck arriving at zone B', type: 'text', timestamp: new Date(Date.now() - 1000 * 60 * 5) }
+        { id: '1', sender: 'Manager', role: Role.MANAGER, content: 'Weather alert: Heavy rain expected at 15:00. Cover bins.', type: 'broadcast', timestamp: new Date(Date.now() - 1000 * 60 * 12) },
+        { id: '2', sender: 'Sarah', role: Role.TEAM_LEAD, content: 'Truck #4 is arriving at North Gate.', type: 'text', timestamp: new Date(Date.now()) }
     ]);
 
-    // LÓGICA DE NEGOCIO: Escudo Laboral
+    // --- EFFECTS FOR PERSISTENCE ---
+    useEffect(() => {
+        const handleOnline = () => setIsOffline(false);
+        const handleOffline = () => setIsOffline(true);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (isOffline) {
+            localStorage.setItem('harvest_pickers', JSON.stringify(pickers));
+            localStorage.setItem('harvest_settings', JSON.stringify(settings));
+            // In a real app, we would queue changes here
+        }
+    }, [pickers, settings, isOffline]);
+
+    // --- BUSINESS LOGIC ---
+
+    // Wage Shield Calculation
     const getWageCalculation = (picker: Picker) => {
         const pieceRevenue = picker.buckets * settings.bucketRate;
         const guaranteedRevenue = picker.hours * settings.minWage;
         
+        // Red: Earning less than min wage (Top-up required)
         const isMinWage = guaranteedRevenue > pieceRevenue;
         
-        // Red: Company losing money (Top-up required)
-        // Orange: Close to min wage (110%)
-        // Green: Profitable
-        const rateStatus: 'red' | 'orange' | 'green' = isMinWage ? 'red' : (pieceRevenue < guaranteedRevenue * 1.1 ? 'orange' : 'green');
+        // Orange: Close to min wage (within 10%)
+        const isClose = !isMinWage && pieceRevenue < (guaranteedRevenue * 1.1);
+
+        const rateStatus: 'red' | 'orange' | 'green' = isMinWage ? 'red' : (isClose ? 'orange' : 'green');
         const revenue = Math.max(pieceRevenue, guaranteedRevenue);
 
         return { revenue, rateStatus };
@@ -110,8 +138,8 @@ export const HarvestProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const playAlertSound = () => {
         // Mock audio play
-        console.log("🔊 AUDIO ALERT: Ping!");
-        // const audio = new Audio('path/to/ping.mp3');
+        console.log("🔊 AUDIO ALERT: Productivity dropped below threshold");
+        // const audio = new Audio('/assets/ping-click.mp3');
         // audio.play().catch(e => console.log(e));
     };
 
@@ -120,17 +148,16 @@ export const HarvestProvider: React.FC<{ children: React.ReactNode }> = ({ child
             if (p.id !== id) return p;
             
             const newBuckets = Math.max(0, p.buckets + bucketsChange);
-            
-            // Check Wage Status after update
             const updatedPicker = { ...p, buckets: newBuckets };
+            
             const { rateStatus } = getWageCalculation(updatedPicker);
             
-            if (rateStatus === 'red' && bucketsChange < 0) {
-                // Trigger alert if performance drops into red
+            // Alert if dropping into red
+            if (rateStatus === 'red' && p.rateStatus !== 'red') {
                 playAlertSound();
             }
 
-            return { ...p, buckets: newBuckets, lastActive: new Date() };
+            return { ...updatedPicker, rateStatus, lastActive: new Date() };
         }));
     };
 
@@ -162,7 +189,21 @@ export const HarvestProvider: React.FC<{ children: React.ReactNode }> = ({ child
         });
     };
 
-    const updateWarehouse = (type: keyof WarehouseState, change: number) => {
+    const scanNewBin = () => {
+        const newId = Math.floor(4000 + Math.random() * 1000).toString();
+        setActiveBin({
+            id: newId,
+            fillLevel: 0,
+            status: 'collecting',
+            type: 'standard',
+            location: { x: 0, y: 0 },
+            startTime: new Date()
+        });
+        // Logic to add previous bin to warehouse would go here
+        updateWarehouse('emptyBins', -1);
+    };
+
+    const updateWarehouse = (type: Exclude<keyof WarehouseState, 'managerName'>, change: number) => {
         setWarehouse(prev => ({ ...prev, [type]: prev[type] + change }));
     };
 
@@ -172,7 +213,7 @@ export const HarvestProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const sendMessage = (msg: Omit<Message, 'id' | 'timestamp'>) => {
         const newMessage = { ...msg, id: Date.now().toString(), timestamp: new Date() };
-        setMessages(prev => [...prev, newMessage]);
+        setMessages(prev => [newMessage, ...prev]);
     };
 
     const toggleOffline = () => setIsOffline(!isOffline);
@@ -183,7 +224,7 @@ export const HarvestProvider: React.FC<{ children: React.ReactNode }> = ({ child
             pickers, teams, addPicker, removePicker,
             updatePickerStats, toggleDefect,
             warehouse, updateWarehouse,
-            activeBin, updateActiveBin,
+            activeBin, updateActiveBin, scanNewBin,
             mapPins,
             messages, sendMessage,
             getWageCalculation,

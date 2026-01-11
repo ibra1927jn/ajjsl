@@ -13,25 +13,36 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: "#D2042D", 
+                        primary: "#D2042D", // Auth Red
                         "primary-dark": "#9E0322",
-                        "primary-vibrant": "#ff1f3d",
-                        "primary-dim": "#b3152b",
+                        
+                        // Manager Palette (Dark Mode)
+                        "manager-primary": "#ec1337",
                         "cherry-dark": "#2d0b12",
                         "cherry-mid": "#482329",
-                        "cherry-light": "#fdf2f3",
-                        "background-light": "#f4f5f7",
-                        "background-dark": "#121212", 
+                        "cherry-light": "#c9929b",
+                        "background-dark": "#121212",
                         "card-dark": "#1e1e1e",
+                        
+                        // TL Palette (Vibrant)
+                        "tl-primary": "#d91e36",
+                        "tl-vibrant": "#ff1f3d",
+                        "tl-dim": "#b3152b",
+                        
+                        // Runner Palette
+                        "runner-primary": "#ec1325",
+                        
+                        // Shared
+                        "background-light": "#f4f5f7",
                         "surface-white": "#ffffff",
                         "text-main": "#1f2937",
                         "text-sub": "#6b7280",
                         "border-light": "#e5e7eb",
                         "warning": "#f59e0b",
                         "success": "#10b981",
+                        "bonus": "#fbbf24",
                         "alert-orange": "#f97316",
                         "alert-orange-light": "#ffedd5",
-                        "bonus": "#fbbf24",
                     },
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
@@ -78,6 +89,7 @@
             filter: invert(1);
             cursor: pointer;
         }
+        /* Circular Chart Styles */
         .circular-chart {
             display: block;
             margin: 0 auto;

@@ -6,21 +6,24 @@ export enum Role {
 
 export interface OrchardSettings {
     minWage: number; // 23.50
-    bucketRate: number; // Precio por cubo
-    targetRate: number; // Objetivo
+    bucketRate: number; // Piece Rate
+    targetRate: number; // Target buckets/hr
     variety: string;
     orchardName: string;
-    dailyGoal: number; // Kg
-    harvestedTotal: number; // Kg
+    dailyGoal: number; // Tons
+    harvestedTotal: number; // Tons
 }
 
 export interface Picker {
     id: string;
     name: string;
-    harnessId: string;
+    harnessId: string; // Physical gear link
     buckets: number;
     hours: number;
+    qcPerformed: number; 
     qualityScore: number; // 0-100
+    currentRow: string;
+    treesDone: number;
     defects: {
         spurs: boolean;
         damage: boolean;
@@ -28,7 +31,7 @@ export interface Picker {
         color: boolean;
     };
     status: 'active' | 'break' | 'coaching_needed';
-    row: string;
+    rateStatus: 'green' | 'orange' | 'red'; // Wage Shield Status
     lastActive: Date;
     teamId: string;
 }
@@ -43,18 +46,19 @@ export interface Team {
 }
 
 export interface Bin {
-    id: string; // 5 digit code
+    id: string;
     fillLevel: number; // 0-72 buckets
     status: 'collecting' | 'full' | 'transit';
     type: 'standard' | 'export';
-    location: { x: number; y: number }; // Coordenadas mapa 0-100
-    startTime: Date; // Para Sun Exposure Timer
+    location: { x: number; y: number };
+    startTime: Date; // For Sun Exposure
 }
 
 export interface WarehouseState {
-    emptyBins: number; // Contenedores grandes
-    binsWithEmptyBuckets: number; // Bins con cubos vacíos
+    emptyBins: number; 
+    binsWithEmptyBuckets: number;
     fullCherryBins: number;
+    managerName: string;
 }
 
 export interface MapPin {
@@ -71,8 +75,8 @@ export interface Message {
     id: string;
     sender: string;
     role: Role;
-    content: string; // Texto
-    imageUrl?: string; // URL de imagen
-    type: 'text' | 'image';
+    content: string; 
+    imageUrl?: string; // Photo reports
+    type: 'text' | 'image' | 'broadcast';
     timestamp: Date;
 }
