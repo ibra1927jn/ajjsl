@@ -30,6 +30,16 @@ export interface Picker {
     status: 'active' | 'break' | 'coaching_needed';
     row: string;
     lastActive: Date;
+    teamId: string;
+}
+
+export interface Team {
+    id: string;
+    leaderName: string;
+    leaderAvatar?: string;
+    block: string;
+    tons: number;
+    avgQuality: number;
 }
 
 export interface Bin {
@@ -61,7 +71,8 @@ export interface Message {
     id: string;
     sender: string;
     role: Role;
-    content: string; // Texto o URL de imagen
+    content: string; // Texto
+    imageUrl?: string; // URL de imagen
     type: 'text' | 'image';
     timestamp: Date;
 }

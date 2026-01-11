@@ -1,167 +1,162 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { Icon, Card, Button } from '../components/Shared';
-import { useHarvest } from '../context/HarvestContext';
+import React from 'react';
 
-export const RunnerLogistics = () => {
-    const { activeBin, updateActiveBin } = useHarvest();
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const [scanMode, setScanMode] = useState<'bin' | 'sticker' | null>(null);
-    const [sunExposure, setSunExposure] = useState(0);
-
-    // Sun Timer Logic
-    useEffect(() => {
-        const interval = setInterval(() => {
-            const now = new Date();
-            const diffMs = now.getTime() - activeBin.startTime.getTime();
-            setSunExposure(Math.floor(diffMs / 60000));
-        }, 1000);
-        return () => clearInterval(interval);
-    }, [activeBin.startTime]);
-
-    const handleScanClick = (mode: 'bin' | 'sticker') => {
-        setScanMode(mode);
-        fileInputRef.current?.click();
-    };
-
-    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        // Simulated NPU Scanning
-        setTimeout(() => {
-            if (scanMode === 'sticker') {
-                updateActiveBin(1);
-                // Haptic feedback simulation would go here
-            }
-            setScanMode(null);
-        }, 300);
-    };
-
-    const percentage = Math.min(100, (activeBin.fillLevel / 72) * 100);
-    const isFull = activeBin.fillLevel >= 72;
-
-    return (
-        <div className="bg-background-light h-screen flex flex-col overflow-hidden text-text-main relative select-none">
-            <header className="flex-none bg-white shadow-sm z-10 px-4 py-3 flex justify-between items-center">
-                <h2 className="text-xl font-bold leading-tight text-gray-900">Logistics Hub</h2>
-                <div className={`px-3 py-1 rounded-full text-xs font-mono font-bold flex items-center gap-1 border ${sunExposure > 60 ? 'bg-red-100 text-red-600 border-red-200 animate-pulse' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>
-                    <Icon name="wb_sunny" className="text-sm"/>
-                    {sunExposure}m Exposed
-                </div>
-            </header>
-
-            <main className="flex-1 flex flex-col items-center pt-8 p-4 pb-48">
-                {/* Active Bin Tracker */}
-                <div className="text-center mb-6">
-                    <h3 className="text-gray-400 text-sm font-bold uppercase tracking-widest mb-1">Active Bin</h3>
-                    <p className="text-3xl font-black text-gray-900">#{activeBin.id}</p>
-                </div>
-
-                <div className="relative size-72">
-                    {/* Background Circle */}
-                    <svg className="size-full -rotate-90" viewBox="0 0 36 36">
-                        <path className="fill-none stroke-gray-100 stroke-[1.5]" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                        <path 
-                            className={`fill-none stroke-[2] stroke-linecap-round transition-all duration-300 ${isFull ? 'stroke-success' : 'stroke-primary'}`}
-                            strokeDasharray={`${percentage}, 100`} 
-                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" 
-                        />
-                    </svg>
-                    
-                    {/* Inner Content */}
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <div className="text-7xl font-black tracking-tighter text-gray-900 leading-none">
-                            {percentage.toFixed(0)}<span className="text-3xl text-gray-400">%</span>
-                        </div>
-                        <div className="text-sm font-bold text-gray-400 uppercase mt-2 tracking-wide bg-gray-100 px-3 py-1 rounded-full">
-                            {activeBin.fillLevel} / 72 Buckets
-                        </div>
-                    </div>
-                </div>
-
-                {isFull && (
-                    <div className="mt-8 w-full max-w-xs bg-green-500 text-white p-4 rounded-2xl shadow-xl shadow-green-500/30 flex items-center justify-center gap-3 animate-bounce">
-                        <Icon name="local_shipping" className="text-2xl" />
-                        <span className="font-bold text-lg">READY FOR PICKUP</span>
-                    </div>
-                )}
-            </main>
-
-            {/* Hidden Input */}
-            <input type="file" ref={fileInputRef} className="hidden" accept="image/*" capture="environment" onChange={handleFileChange} />
-
-            {/* Ergonomic Thumb Controls */}
-            <div className="fixed bottom-24 left-4 z-20">
-                <button 
-                    onClick={() => handleScanClick('bin')}
-                    className="size-24 rounded-[2rem] bg-gray-900 text-white shadow-2xl flex flex-col items-center justify-center active:scale-90 transition-transform border-4 border-white/10"
-                >
-                    <Icon name="qr_code_scanner" className="text-3xl mb-1"/>
-                    <span className="text-[10px] font-bold uppercase tracking-wide">Scan Bin</span>
+const RunnerHeader = ({ title, subtitle, rightIcon, onRightClick }: any) => (
+    <header className="flex-none bg-white dark:bg-[#1b0d0f] shadow-sm z-10">
+        <div className="flex items-center px-4 py-3 justify-between">
+            <div>
+                <h2 className="text-[#1b0d0f] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em] flex-1">{title}</h2>
+                {subtitle && <p className="text-[10px] text-primary font-bold tracking-widest uppercase">{subtitle}</p>}
+            </div>
+            <div className="flex items-center justify-end gap-3">
+                <button className="flex items-center justify-center rounded-full size-10 bg-cherry-light dark:bg-primary/20 text-primary">
+                    <span className="material-symbols-outlined" style={{fontSize: '24px'}}>{rightIcon || 'notifications'}</span>
                 </button>
             </div>
+        </div>
+    </header>
+);
 
-            <div className="fixed bottom-24 right-4 z-20">
-                <button 
-                    onClick={() => handleScanClick('sticker')}
-                    className="size-24 rounded-[2rem] bg-primary text-white shadow-2xl shadow-primary/40 flex flex-col items-center justify-center active:scale-90 transition-transform border-4 border-white"
-                >
-                    <Icon name="center_focus_strong" className="text-4xl mb-1"/>
-                    <span className="text-[10px] font-bold uppercase tracking-wide">Sticker</span>
-                </button>
+export const RunnerLogistics = () => {
+    return (
+        <div className="bg-background-light dark:bg-background-dark text-[#1b0d0f] dark:text-white h-screen flex flex-col overflow-hidden">
+            <RunnerHeader title="Logistics Hub" />
+            <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-800/30 px-4 py-2 flex items-center gap-3">
+                <span className="material-symbols-outlined text-amber-600 dark:text-amber-500" style={{fontSize: '20px'}}>cloud_off</span>
+                <p className="text-amber-800 dark:text-amber-200 text-sm font-medium flex-1">Offline Sync Pending</p>
+                <div className="flex items-center gap-1"><span className="material-symbols-outlined text-amber-600 dark:text-amber-500 animate-spin" style={{fontSize: '18px'}}>sync</span><span className="text-xs font-semibold text-amber-700 dark:text-amber-300">14 Items</span></div>
+            </div>
+            <main className="flex-1 overflow-y-auto bg-background-light dark:bg-background-dark pb-32 p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                    <div><h2 className="text-lg font-bold text-[#1b0d0f] dark:text-white">Active Bin #4092</h2><p className="text-sm text-gray-500 dark:text-gray-400">Harvesting: Stella Cherries</p></div>
+                    <div className="px-3 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-bold uppercase tracking-wider">In Progress</div>
+                </div>
+                <div className="bg-white dark:bg-[#2d1b1d] rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col items-center justify-center relative">
+                    <svg className="circular-chart text-primary" viewBox="0 0 36 36">
+                        <path className="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
+                        <path className="circle stroke-current" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" strokeDasharray="63, 100"></path>
+                        <text className="percentage fill-current dark:fill-white" x="18" y="19">63%</text>
+                        <text className="sub-text fill-gray-500 dark:fill-gray-400" x="18" y="24">FULL</text>
+                    </svg>
+                    <div className="mt-4 text-center">
+                        <p className="text-3xl font-bold text-[#1b0d0f] dark:text-white tabular-nums">45<span className="text-lg text-gray-400 font-normal">/72</span></p>
+                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mt-1">Buckets Collected</p>
+                    </div>
+                </div>
+                <div className="bg-white dark:bg-[#2d1b1d] rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="size-10 rounded-lg bg-orange-100 dark:bg-orange-900/20 flex items-center justify-center text-orange-600 dark:text-orange-400"><span className="material-symbols-outlined">wb_sunny</span></div>
+                        <div><p className="text-sm font-medium text-gray-500 dark:text-gray-400">Sun Exposure</p><p className="text-xs text-gray-400">Since bin started</p></div>
+                    </div>
+                    <div className="text-right"><p className="text-xl font-bold text-[#1b0d0f] dark:text-white tabular-nums font-mono">01:15:00</p><p className="text-xs font-semibold text-green-600 dark:text-green-400">Safe Level</p></div>
+                </div>
+            </main>
+            <div className="fixed bottom-[5.5rem] left-0 w-full z-20 pointer-events-none px-4 pb-2">
+                <div className="flex gap-4 pointer-events-auto">
+                    <button className="flex-1 flex flex-col items-center justify-center h-20 bg-white dark:bg-[#2d1b1d] border-2 border-primary text-primary rounded-xl active:bg-cherry-light dark:active:bg-primary/20 transition-colors shadow-sm group">
+                        <span className="material-symbols-outlined mb-1 group-active:scale-95 transition-transform">qr_code_scanner</span>
+                        <span className="text-sm font-extrabold uppercase tracking-wide">Scan Bin</span>
+                    </button>
+                    <button className="flex-1 flex flex-col items-center justify-center h-20 bg-primary text-white rounded-xl shadow-md active:bg-primary-dark transition-colors group">
+                        <span className="material-symbols-outlined mb-1 group-active:scale-95 transition-transform">local_offer</span>
+                        <span className="text-sm font-extrabold uppercase tracking-wide">Scan Sticker</span>
+                    </button>
+                </div>
             </div>
         </div>
     );
 };
 
 export const RunnerWarehouse = () => {
-    const { warehouse, updateWarehouse } = useHarvest();
-
     return (
-        <div className="bg-background-light h-screen flex flex-col text-text-main">
-             <header className="flex-none bg-white shadow-sm z-10 px-4 py-3">
-                 <h2 className="text-xl font-bold leading-tight">Warehouse</h2>
-            </header>
-            <main className="flex-1 overflow-y-auto p-4 space-y-4">
-                 
-                 {/* Full Cherry Bins Counter */}
-                 <div className="bg-primary text-white rounded-3xl p-6 shadow-xl shadow-primary/20 relative overflow-hidden group">
-                     <div className="absolute right-0 top-0 p-6 opacity-10"><Icon name="inventory_2" className="text-8xl" /></div>
-                     <h3 className="text-sm font-bold uppercase tracking-widest opacity-80 mb-2">Harvested Stock</h3>
-                     <div className="text-6xl font-black">{warehouse.fullCherryBins}</div>
-                     <div className="text-sm font-medium opacity-90 mt-1">Full Bins Ready</div>
-                     <div className="mt-4 pt-4 border-t border-white/20 flex gap-2">
-                         <span className="bg-white/20 px-2 py-1 rounded text-xs font-bold">Cold Storage A</span>
-                     </div>
-                 </div>
-
-                 <div className="grid grid-cols-2 gap-4">
-                     {/* Empty Bins */}
-                     <Card className="flex flex-col items-center py-6 active:border-primary transition-colors">
-                        <span className="text-4xl font-black text-gray-900 mb-1">{warehouse.emptyBins}</span>
-                        <span className="text-xs font-bold text-gray-400 uppercase text-center leading-tight">Empty Bins<br/>Available</span>
-                        <div className="mt-4 flex gap-2">
-                            <button onClick={() => updateWarehouse('emptyBins', -1)} className="bg-gray-100 p-2 rounded-lg"><Icon name="remove" className="text-sm"/></button>
-                            <button onClick={() => updateWarehouse('emptyBins', 1)} className="bg-gray-100 p-2 rounded-lg"><Icon name="add" className="text-sm"/></button>
+        <div className="bg-background-light dark:bg-background-dark text-[#1b0d0f] dark:text-white h-screen flex flex-col overflow-hidden">
+            <RunnerHeader title="Warehouse Inventory" />
+            <main className="flex-1 overflow-y-auto bg-background-light dark:bg-background-dark pb-36 p-4 space-y-5">
+                <div className="bg-white dark:bg-[#2d1b1d] rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-800 relative overflow-hidden group">
+                    <div className="absolute top-0 left-0 w-2 h-full bg-primary group-hover:w-3 transition-all"></div>
+                    <div className="flex items-start justify-between">
+                        <div><h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Harvested Stock</h3><h2 className="text-2xl font-bold text-gray-900 dark:text-white">Full Cherry Bins</h2></div>
+                        <div className="size-14 rounded-xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-primary border border-red-100 dark:border-red-800/30"><span className="material-symbols-outlined text-3xl">inventory_2</span></div>
+                    </div>
+                    <div className="mt-6 flex items-baseline gap-3"><span className="text-6xl font-black text-gray-900 dark:text-white tracking-tighter">28</span><span className="text-lg font-medium text-gray-500 dark:text-gray-400">filled</span></div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-white dark:bg-[#2d1b1d] rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-gray-800 flex flex-col h-full hover:border-orange-200 transition-colors">
+                        <div className="flex items-start justify-between mb-4">
+                            <div className="size-10 rounded-lg bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-orange-600 border border-orange-100 dark:border-orange-800/30"><span className="material-symbols-outlined">grid_view</span></div>
+                            <span className="px-2 py-1 rounded text-[10px] font-bold bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 uppercase">Low</span>
                         </div>
-                     </Card>
-
-                     {/* Bins with Buckets */}
-                     <Card className="flex flex-col items-center py-6 active:border-blue-500 transition-colors">
-                        <span className="text-4xl font-black text-blue-600 mb-1">{warehouse.binsWithEmptyBuckets}</span>
-                        <span className="text-xs font-bold text-gray-400 uppercase text-center leading-tight">Bucket<br/>Supplies</span>
-                        <div className="mt-4 flex gap-2">
-                            <button onClick={() => updateWarehouse('binsWithEmptyBuckets', -1)} className="bg-blue-50 text-blue-600 p-2 rounded-lg"><Icon name="remove" className="text-sm"/></button>
-                            <button onClick={() => updateWarehouse('binsWithEmptyBuckets', 1)} className="bg-blue-50 text-blue-600 p-2 rounded-lg"><Icon name="add" className="text-sm"/></button>
+                        <div className="flex-1 flex flex-col justify-end"><span className="text-5xl font-bold text-gray-900 dark:text-white block mb-1 tracking-tight">15</span><span className="text-sm font-bold text-gray-600 dark:text-gray-300 leading-tight block">Empty Bins Available</span></div>
+                    </div>
+                    <div className="bg-white dark:bg-[#2d1b1d] rounded-2xl p-5 shadow-sm border border-gray-200 dark:border-gray-800 flex flex-col h-full hover:border-blue-200 transition-colors">
+                        <div className="flex items-start justify-between mb-4">
+                            <div className="size-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 border border-blue-100 dark:border-blue-800/30"><span className="material-symbols-outlined">shopping_basket</span></div>
+                            <span className="px-2 py-1 rounded text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 uppercase">OK</span>
                         </div>
-                     </Card>
-                 </div>
-                 
-                 <div className="bg-gray-900 text-white p-4 rounded-xl flex items-center justify-between cursor-pointer active:scale-[0.98]">
-                     <div>
-                         <h4 className="font-bold">Transport Request</h4>
-                         <p className="text-xs text-gray-400">Notify depot for pickup</p>
-                     </div>
-                     <Icon name="local_shipping" className="text-2xl" />
-                 </div>
+                        <div className="flex-1 flex flex-col justify-end"><span className="text-5xl font-bold text-gray-900 dark:text-white block mb-1 tracking-tight">8</span><span className="text-sm font-bold text-gray-600 dark:text-gray-300 leading-tight block">Bins with Empty Buckets</span></div>
+                    </div>
+                </div>
+            </main>
+            <div className="fixed bottom-[5.5rem] left-0 w-full z-20 p-4 pb-2 pointer-events-none"><div className="pointer-events-auto"><button className="w-full h-16 bg-primary hover:bg-primary-dark text-white rounded-xl shadow-lg shadow-primary/30 flex items-center justify-center gap-3 active:scale-[0.98] transition-all group"><span className="material-symbols-outlined text-3xl group-active:scale-90 transition-transform">local_shipping</span><span className="text-lg font-extrabold uppercase tracking-wide">Request Transport</span></button></div></div>
+        </div>
+    );
+};
+
+export const RunnerTeam = () => {
+    return (
+        <div className="bg-background-light text-slate-800 h-screen flex flex-col overflow-hidden relative">
+            <RunnerHeader title="Orchard Runners" subtitle="Team Coordination" rightIcon="add" />
+            <main className="flex-1 overflow-y-auto px-4 py-6 space-y-4 z-10 pb-32">
+                <div className="flex items-center justify-between px-1 mb-2">
+                    <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide">Logistics Team</h2>
+                    <div className="flex items-center gap-2"><span className="relative flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span></span><span className="text-primary font-bold text-xs uppercase tracking-wider">4 Active</span></div>
+                </div>
+                <div className="bg-white p-5 rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.06)] border border-gray-100 flex flex-col gap-4 animate-fade-in-up">
+                    <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="size-14 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-400 border border-gray-200"><span className="material-symbols-outlined text-3xl">person</span></div>
+                            <div>
+                                <h3 className="font-bold text-slate-900 text-xl leading-tight">Liam O'Connor</h3>
+                                <div className="flex items-center gap-1.5 mt-1"><span className="material-symbols-outlined text-sm text-primary filled">location_on</span><span className="text-sm font-medium text-gray-600">Row 04 <span className="text-gray-300 mx-1">|</span> Block B</span></div>
+                            </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1"><div className="size-3 rounded-full bg-green-500 shadow-[0_0_0_4px_rgba(34,197,94,0.15)]"></div></div>
+                    </div>
+                    <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 flex items-center justify-between">
+                        <div><p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Current Task</p><p className="text-sm font-semibold text-slate-800">Transporting Bin #4092</p></div>
+                        <span className="material-symbols-outlined text-gray-400">local_shipping</span>
+                    </div>
+                    <button className="w-full h-12 flex items-center justify-center gap-2 rounded-xl bg-primary text-white font-bold text-sm shadow-md shadow-red-500/20 active:bg-primary-dark transition-colors"><span>View Tasks</span><span className="material-symbols-outlined text-lg">arrow_forward</span></button>
+                </div>
             </main>
         </div>
     );
-}
+};
+
+export const RunnerMessaging = () => {
+    return (
+        <div className="bg-background-light dark:bg-background-dark text-[#1b0d0f] dark:text-white h-screen flex flex-col overflow-hidden">
+            <header className="flex-none bg-white dark:bg-[#1b0d0f] shadow-sm z-30">
+                <div className="flex items-center px-4 py-3 justify-between">
+                    <h2 className="text-[#1b0d0f] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em] flex-1">Messaging Hub</h2>
+                    <div className="flex items-center justify-end gap-3">
+                        <button className="flex items-center justify-center rounded-full size-10 bg-cherry-light dark:bg-primary/20 text-primary relative">
+                            <span className="material-symbols-outlined" style={{fontSize: '24px'}}>notifications</span>
+                            <span className="absolute top-2 right-2 size-2 bg-primary rounded-full border-2 border-white dark:border-[#1b0d0f]"></span>
+                        </button>
+                    </div>
+                </div>
+                <div className="bg-primary text-white px-4 py-3 flex items-start gap-3 shadow-md relative overflow-hidden">
+                    <div className="absolute -right-4 -top-4 text-white/10"><span className="material-symbols-outlined" style={{fontSize: '80px'}}>campaign</span></div>
+                    <span className="material-symbols-outlined flex-none mt-0.5 filled" style={{fontVariationSettings: "'FILL' 1"}}>warning</span>
+                    <div className="relative z-10"><p className="text-xs font-bold uppercase opacity-90 mb-0.5 tracking-wider">Manager Broadcast</p><p className="text-sm font-semibold leading-tight">Harvest paused for Block 4 due to incoming rain. Cover bins immediately.</p></div>
+                </div>
+            </header>
+            <main className="flex-1 overflow-y-auto bg-background-light dark:bg-background-dark pb-24 relative p-4 space-y-3">
+                <div className="bg-white dark:bg-[#2d1b1d] rounded-xl p-4 shadow-sm border-l-4 border-primary active:scale-[0.99] transition-transform">
+                    <div className="flex justify-between items-start mb-2"><div className="flex items-center gap-2"><span className="material-symbols-outlined text-primary" style={{fontVariationSettings: "'FILL' 1"}}>groups</span><h3 className="font-bold text-[#1b0d0f] dark:text-white">Logistics Team</h3></div><span className="text-[10px] font-medium text-gray-400">Just now</span></div>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2"><span className="font-bold text-[#1b0d0f] dark:text-white">Sarah:</span> Truck #4 is arriving at the North Gate. We need 3 loaders ready.</p>
+                </div>
+            </main>
+        </div>
+    );
+};
