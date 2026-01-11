@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>HarvestPro NZ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#D2042D", // Cherry Red
+                        "primary-dark": "#9E0322",
+                        "primary-vibrant": "#ff1f3d",
+                        "primary-dim": "#b3152b",
+                        "background-light": "#f8f6f6",
+                        "background-dark": "#1a0508", // Dark Cherry/Black for Manager
+                        "card-dark": "#2a0e11",
+                        "surface-white": "#ffffff",
+                        "text-main": "#1f2937",
+                        "text-sub": "#6b7280",
+                        "border-light": "#e5e7eb",
+                        "warning": "#f59e0b",
+                        "success": "#10b981",
+                        "cherry-light": "#fdf2f3",
+                        "alert-orange": "#f97316",
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+                        'glow': "0 4px 14px rgba(255, 31, 61, 0.25)",
+                    }
+                },
+            },
+        }
+    </script>
+    <style>
+        body {
+            -webkit-tap-highlight-color: transparent;
+            min-height: 100vh;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.35.0",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.12.0",
+    "recharts": "https://esm.sh/recharts@^3.6.0"
+  }
+}
+</script>
+</head>
+<body class="bg-background-light text-text-main antialiased selection:bg-primary selection:text-white">
+    <div id="root"></div>
+</body>
+</html>

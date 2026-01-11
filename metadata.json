@@ -1,0 +1,9 @@
+{
+  "name": "HarvestPro NZ",
+  "description": "A comprehensive orchard management system for Runners, Team Leaders, and Managers featuring real-time logistics, team coordination, and Gemini-powered smart assistance.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
