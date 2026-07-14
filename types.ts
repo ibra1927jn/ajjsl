@@ -1,82 +1,136 @@
-export enum Role {
-    MANAGER = 'manager',
-    TEAM_LEAD = 'tl',
-    RUNNER = 'runner'
+// ===== Entidades base =====
+
+export interface CarStats {
+    aero: number;        // 0-100
+    engine: number;      // 0-100
+    chassis: number;     // 0-100
+    reliability: number; // 0-100
 }
 
-export interface OrchardSettings {
-    minWage: number; // 23.50
-    bucketRate: number; // Piece Rate
-    targetRate: number; // Target buckets/hr
-    variety: string;
-    orchardName: string;
-    dailyGoal: number; // Tons
-    harvestedTotal: number; // Tons
-}
-
-export interface Picker {
-    id: string;
-    name: string;
-    harnessId: string; // Physical gear link
-    buckets: number;
-    hours: number;
-    qcPerformed: number; 
-    qualityScore: number; // 0-100
-    currentRow: string;
-    treesDone: number;
-    defects: {
-        spurs: boolean;
-        damage: boolean;
-        small: boolean;
-        color: boolean;
-    };
-    status: 'active' | 'break' | 'coaching_needed';
-    rateStatus: 'green' | 'orange' | 'red'; // Wage Shield Status
-    lastActive: Date;
-    teamId: string;
-}
+export type CarStatKey = keyof CarStats;
 
 export interface Team {
     id: string;
-    leaderName: string;
-    leaderAvatar?: string;
-    block: string;
-    tons: number;
-    avgQuality: number;
+    name: string;
+    shortName: string;
+    color: string;          // color hex del equipo (se usa inline)
+    car: CarStats;
+    budget: number;         // $M
+    sponsorTier: 1 | 2 | 3; // 1 = mejor patrocinio
+    driverIds: string[];    // exactamente 2
 }
 
-export interface Bin {
+export interface Driver {
     id: string;
-    fillLevel: number; // 0-72 buckets
-    status: 'collecting' | 'full' | 'transit';
-    type: 'standard' | 'export';
-    location: { x: number; y: number };
-    startTime: Date; // For Sun Exposure
+    name: string;
+    shortCode: string;      // VER, HAM...
+    teamId: string | null;  // null = agente libre
+    pace: number;           // 0-100 velocidad pura
+    racecraft: number;      // 0-100 habilidad en pelea
+    consistency: number;    // 0-100 menos errores/ruido
+    experience: number;     // 0-100
+    salary: number;         // $M por temporada
+    contractYears: number;
 }
 
-export interface WarehouseState {
-    emptyBins: number; 
-    binsWithEmptyBuckets: number;
-    fullCherryBins: number;
-    managerName: string;
-}
-
-export interface MapPin {
+export interface Circuit {
     id: string;
-    type: 'bin_full' | 'tractor' | 'team_lead' | 'picker_group';
-    x: number; // % left
-    y: number; // % top
-    alert?: boolean; // >20 min waiting
-    label?: string;
-    minutesWaiting?: number;
+    name: string;
+    country: string;
+    laps: number;                  // vueltas reales (el motor las escala)
+    baseLapSec: number;            // vuelta base en segundos
+    overtakingDifficulty: number;  // 0-1 (Mónaco ~0.9, Monza ~0.2)
+    tireStress: number;            // multiplicador de degradación 0.8-1.3
 }
 
-export interface Message {
-    id: string;
-    sender: string;
-    role: Role;
-    content: string; 
-    imageUrl?: string; // Photo reports
-    type: 'text' | 'image' | 'broadcast';
-    timestamp: Date;
+export type Compound = 'soft' | 'medium' | 'hard';
+
+// ===== Carrera en vivo (estado efímero, no se persiste) =====
+
+export type RacePhase = 'green' | 'safetyCar' | 'finished';
+export type CarStatus = 'running' | 'dnf';
+
+export interface CarState {
+    driverId: string;
+    teamId: string;
+    gridPos: number;
+    totalTime: number;      // tiempo acumulado de carrera (s)
+    lastLap: number;        // último tiempo de vuelta (s)
+    compound: Compound;
+    tireAge: number;        // vueltas del juego con este juego de neumáticos
+    formOffset: number;     // forma del fin de semana en s/vuelta (+ = más lento)
+    pitCount: number;
+    status: CarStatus;
+    dnfLap?: number;
+    pendingPit: Compound | null; // parada encolada para la próxima vuelta
 }
+
+export type RaceEventType = 'overtake' | 'pit' | 'dnf' | 'safetyCar' | 'safetyCarEnd' | 'fastestLap' | 'info';
+
+export interface RaceEvent {
+    lap: number;
+    type: RaceEventType;
+    message: string;
+}
+
+export interface RaceState {
+    circuitId: string;
+    lap: number;            // vuelta actual completada
+    totalLaps: number;      // vueltas escaladas del juego
+    cars: CarState[];       // orden = posición actual en carrera
+    events: RaceEvent[];
+    phase: RacePhase;
+    safetyCarLapsLeft: number;
+    fastestLap: { driverId: string; time: number } | null;
+    rngState: number;       // estado del RNG con seed para reproducibilidad
+}
+
+// ===== Resultados persistentes =====
+
+export interface DriverResult {
+    driverId: string;
+    teamId: string;
+    position: number | null; // null = DNF
+    points: number;
+    fastestLap: boolean;
+    dnf: boolean;
+}
+
+export interface RaceResultRecord {
+    raceIndex: number;
+    circuitId: string;
+    season: number;
+    classification: DriverResult[]; // ordenado: clasificados primero, luego DNFs
+    polesitterId: string;
+}
+
+export interface LedgerEntry {
+    raceIndex: number;
+    label: string;
+    amount: number; // $M, negativo = gasto
+}
+
+// ===== Estado global de partida =====
+
+export type GamePhase = 'preRace' | 'postSeason';
+
+export interface GameState {
+    saveVersion: number;
+    playerTeamId: string;
+    season: number;     // año, ej. 2025
+    raceIndex: number;  // 0-23, próxima carrera a disputar
+    teams: Record<string, Team>;
+    drivers: Record<string, Driver>;
+    results: RaceResultRecord[];
+    ledger: LedgerEntry[];
+    phase: GamePhase;
+}
+
+export type GameAction =
+    | { type: 'NEW_GAME'; playerTeamId: string }
+    | { type: 'LOAD_GAME'; state: GameState }
+    | { type: 'RACE_COMPLETED'; record: RaceResultRecord }
+    | { type: 'APPLY_UPGRADE'; stat: CarStatKey; points: number; cost: number }
+    | { type: 'SWAP_DRIVER'; outDriverId: string; inDriverId: string; signingFee: number }
+    | { type: 'ADVANCE_SEASON' }
+    | { type: 'RESET' };

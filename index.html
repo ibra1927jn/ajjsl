@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es" class="dark">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>HarvestPro NZ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>F1 Manager</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
@@ -13,59 +13,28 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: "#D2042D", // Auth Red
-                        "primary-dark": "#9E0322",
-                        
-                        // Manager Palette (Dark Mode)
-                        "manager-primary": "#ec1337",
-                        "cherry-dark": "#2d0b12",
-                        "cherry-mid": "#482329",
-                        "cherry-light": "#c9929b",
-                        "background-dark": "#121212",
-                        "card-dark": "#1e1e1e",
-                        
-                        // TL Palette (Vibrant)
-                        "tl-primary": "#d91e36",
-                        "tl-vibrant": "#ff1f3d",
-                        "tl-dim": "#b3152b",
-                        
-                        // Runner Palette
-                        "runner-primary": "#ec1325",
-                        
-                        // Shared
-                        "background-light": "#f4f5f7",
-                        "surface-white": "#ffffff",
-                        "text-main": "#1f2937",
-                        "text-sub": "#6b7280",
-                        "border-light": "#e5e7eb",
-                        "warning": "#f59e0b",
-                        "success": "#10b981",
-                        "bonus": "#fbbf24",
-                        "alert-orange": "#f97316",
-                        "alert-orange-light": "#ffedd5",
+                        "f1-red": "#e10600",
+                        "f1-red-dark": "#a80400",
+                        "background-dark": "#0e0e13",
+                        "card-dark": "#1a1a22",
+                        "card-darker": "#14141b",
+                        "border-dark": "#2a2a35",
+                        "text-main": "#f0f0f5",
+                        "text-sub": "#8a8a99",
+                        "gap-green": "#00d26a",
+                        "fastest-purple": "#b45bff",
+                        "pit-yellow": "#ffd12e",
+                        "danger": "#ff4d4d",
                     },
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
-                        display: ['Inter', 'sans-serif'],
-                    },
-                    boxShadow: {
-                        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
-                        'glow': "0 4px 14px rgba(255, 31, 61, 0.25)",
-                        'premium': '0 10px 30px -5px rgba(210, 4, 45, 0.15)',
-                    },
-                    borderRadius: {
-                        'xl': '0.75rem',
-                        '2xl': '1rem',
-                        '3xl': '1.5rem',
-                        'ios': '1.25rem',
                     },
                     animation: {
-                        'fade-in-up': 'fadeInUp 0.5s ease-out forwards',
-                        'bounce-slow': 'bounce 3s infinite',
+                        'fade-in-up': 'fadeInUp 0.4s ease-out forwards',
                     },
                     keyframes: {
                         fadeInUp: {
-                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '0%': { opacity: '0', transform: 'translateY(8px)' },
                             '100%': { opacity: '1', transform: 'translateY(0)' },
                         }
                     }
@@ -78,65 +47,13 @@
             -webkit-tap-highlight-color: transparent;
             min-height: 100vh;
         }
-        .hide-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .hide-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        input[type="time"]::-webkit-calendar-picker-indicator {
-            filter: invert(1);
-            cursor: pointer;
-        }
-        /* Circular Chart Styles */
-        .circular-chart {
-            display: block;
-            margin: 0 auto;
-            max-width: 80%;
-            max-height: 250px;
-        }
-        .circle-bg {
-            fill: none;
-            stroke: #e6e6e6;
-            stroke-width: 2.8;
-        }
-        .circle {
-            fill: none;
-            stroke-width: 2.8;
-            stroke-linecap: round;
-        }
-        .percentage {
-            fill: #1b0d0f;
-            font-family: 'Inter', sans-serif;
-            font-weight: bold;
-            font-size: 0.5em;
-            text-anchor: middle;
-        }
-        .dark .percentage {
-            fill: #ffffff;
-        }
-        .sub-text {
-            fill: #666;
-            font-family: 'Inter', sans-serif;
-            font-size: 0.2em;
-            text-anchor: middle;
-        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .tabular-nums { font-variant-numeric: tabular-nums; }
     </style>
-<script type="importmap">
-{
-  "imports": {
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "@google/genai": "https://esm.sh/@google/genai@^1.35.0",
-    "react-router-dom": "https://esm.sh/react-router-dom@^7.12.0",
-    "recharts": "https://esm.sh/recharts@^3.6.0"
-  }
-}
-</script>
 </head>
-<body class="bg-background-light dark:bg-background-dark text-text-main antialiased selection:bg-primary-vibrant selection:text-white">
+<body class="bg-background-dark text-text-main antialiased">
     <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
 </body>
 </html>

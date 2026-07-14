@@ -1,20 +1,31 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# F1 Manager (web)
 
-# Run and deploy your AI Studio app
+Juego de mánager de Fórmula 1 en el navegador, inspirado en F1 Manager de Frontier. Eres el jefe de equipo: eliges escudería, desarrollas el coche, fichas pilotos, gestionas el presupuesto y vives cada gran premio con timing en vivo y estrategia de paradas.
 
-This contains everything you need to run your app locally.
+## Características
 
-View your app in AI Studio: https://ai.studio/apps/drive/1N-OxxHrGH2p-jxgcakZYY0IpetrlxDud
+- **Temporada 2025 completa**: 10 equipos y parrilla real, calendario de 24 grandes premios.
+- **Fin de semana de carrera**: clasificación simulada + carrera vuelta a vuelta con torre de tiempos en vivo, feed de eventos (adelantamientos, paradas, abandonos, safety car) y control de estrategia: tú decides cuándo paran tus coches y qué compuesto montan (blando/medio/duro).
+- **Desarrollo del coche**: invierte en aerodinámica, motor, chasis y fiabilidad. La IA también desarrolla.
+- **Mercado de pilotos**: ficha agentes libres con prima y salario.
+- **Finanzas**: premios por resultado, patrocinio por carrera, salarios y libro de movimientos.
+- **Mundiales de pilotos y constructores** con gráficas de progresión; múltiples temporadas.
+- Guardado automático en `localStorage`. (Refrescar a mitad de carrera te devuelve al inicio del fin de semana.)
 
-## Run Locally
+## Ejecutar en local
 
-**Prerequisites:**  Node.js
+Requisitos: Node.js
 
+```bash
+npm install
+npm run dev
+```
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+Abre http://localhost:3000
+
+## Estructura
+
+- `data/` — equipos, pilotos, circuitos y **todas las constantes de balance** (`constants.ts`).
+- `engine/` — motor del juego en TypeScript puro (sin React), con RNG con seed reproducible: clasificación, carrera vuelta a vuelta, adelantamientos, paradas, incidentes, resultados, desarrollo y mercado.
+- `context/` + `services/` — estado global (reducer) y persistencia versionada.
+- `pages/` + `components/` + `hooks/` — interfaz React.
