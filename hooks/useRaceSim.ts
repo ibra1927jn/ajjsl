@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Circuit, Compound, Driver, RaceState, Team } from '../types';
+import { Circuit, Compound, Driver, PaceMode, RaceState, Team } from '../types';
 import { TICK_SPEEDS } from '../data/constants';
-import { advanceLap, createRaceState, RaceOptions } from '../engine/race';
+import { advanceLap, applyTeamOrderSwap, createRaceState, RaceOptions } from '../engine/race';
 import { QualiResult } from '../engine/qualifying';
 
 // Loop de ticks de la carrera en vivo.
@@ -41,5 +41,18 @@ export function useRaceSim(
         }));
     };
 
-    return { race, paused, setPaused, speedIdx, setSpeedIdx, queuePit };
+    const setPaceMode = (driverId: string, paceMode: PaceMode) => {
+        setRace(prev => ({
+            ...prev,
+            cars: prev.cars.map(c =>
+                c.driverId === driverId && c.teamId === playerTeamId ? { ...c, paceMode } : c,
+            ),
+        }));
+    };
+
+    const requestSwap = () => {
+        setRace(prev => (prev.phase === 'finished' ? prev : applyTeamOrderSwap(prev, playerTeamId)));
+    };
+
+    return { race, paused, setPaused, speedIdx, setSpeedIdx, queuePit, setPaceMode, requestSwap };
 }

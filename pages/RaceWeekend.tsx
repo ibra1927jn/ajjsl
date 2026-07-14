@@ -158,7 +158,7 @@ const RaceRunner = ({ grid, circuit, teams, drivers, playerTeamId, seed, startCo
     startCompound: Compound;
     onFinished: (raceState: RaceState) => void;
 }) => {
-    const { race, paused, setPaused, speedIdx, setSpeedIdx, queuePit } = useRaceSim(
+    const { race, paused, setPaused, speedIdx, setSpeedIdx, queuePit, setPaceMode, requestSwap } = useRaceSim(
         grid, circuit, teams, drivers, playerTeamId, seed, { playerStartCompound: startCompound });
     const finished = race.phase === 'finished';
     const wetness = race.weather.wetness[Math.min(race.lap, race.weather.wetness.length - 1)];
@@ -197,7 +197,8 @@ const RaceRunner = ({ grid, circuit, teams, drivers, playerTeamId, seed, startCo
                     <TimingTower race={race} teams={teams} drivers={drivers} playerTeamId={playerTeamId} />
                 </div>
                 <div className="lg:col-span-2 space-y-3">
-                    <PitControls race={race} playerTeamId={playerTeamId} drivers={drivers} onQueuePit={queuePit} />
+                    <PitControls race={race} playerTeamId={playerTeamId} drivers={drivers}
+                        onQueuePit={queuePit} onPaceMode={setPaceMode} onSwap={requestSwap} />
                     <EventFeed events={race.events} />
                 </div>
             </div>

@@ -1,5 +1,5 @@
 import { CarState, Driver, RaceEvent, Team } from '../types';
-import { BASE_DRIVER_ERROR, BASE_MECH_DNF } from '../data/constants';
+import { BASE_DRIVER_ERROR, BASE_MECH_DNF, PACE_MODES } from '../data/constants';
 import { wetErrorMult } from './weather';
 import { Rng } from './rng';
 
@@ -25,7 +25,8 @@ export function rollIncidents(
 
         const pMech = BASE_MECH_DNF * (2.2 - team.car.reliability / 100);
         const pError = BASE_DRIVER_ERROR * (1.8 - driver.consistency / 100)
-            * wetErrorMult(car.compound, wetness);
+            * wetErrorMult(car.compound, wetness)
+            * PACE_MODES[car.paceMode].errMult;
 
         if (rng.chance(pMech)) {
             car.status = 'dnf';

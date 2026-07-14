@@ -10,7 +10,7 @@ import { rollIncidents } from './incidents';
 import { aiDecidePits, compoundLife } from './pitstop';
 import { resolveOvertakes } from './overtaking';
 import { compoundWetPenalty, dryTrackDegMult, generateWeather, wetLapPenalty } from './weather';
-import { TO_INTER_WETNESS, TO_WET_WETNESS, WET_NOISE_FACTOR } from '../data/constants';
+import { PACE_MODES, TEAM_ORDER_CUSHION, TO_INTER_WETNESS, TO_WET_WETNESS, WET_NOISE_FACTOR } from '../data/constants';
 import { Rng } from './rng';
 
 export function scaledLaps(circuit: Circuit): number {
@@ -63,6 +63,7 @@ export function createRaceState(
             pitCount: 0,
             status: 'running' as const,
             pendingPit: null,
+            paceMode: 'normal' as const,
         };
     });
     const startMsg = w0 >= TO_INTER_WETNESS
@@ -110,12 +111,39 @@ function raceLapTime(
         + perfDelta(team, driver)
         + car.formOffset
         + comp.offset
+        + PACE_MODES[car.paceMode].lapDelta
         + deg
         + wetLapPenalty(wetness, circuit.baseLapSec)
         + compoundWetPenalty(car.compound, wetness)
         + FUEL_EFFECT * (totalLaps - lap)
         + rng.gaussian(0, noiseSd)
         + dirtyAir;
+}
+
+// Orden de equipo: intercambia a los dos coches del jugador si van adyacentes en pista.
+// Puro y sin rng (se llama entre ticks desde la UI sin romper la reproducibilidad).
+export function applyTeamOrderSwap(prev: RaceState, playerTeamId: string): RaceState {
+    const running = prev.cars.filter(c => c.status === 'running');
+    const idxA = running.findIndex(c => c.teamId === playerTeamId);
+    if (idxA < 0 || idxA + 1 >= running.length) return prev;
+    if (running[idxA + 1].teamId !== playerTeamId) return prev;
+
+    const cars = prev.cars.map(c => ({ ...c }));
+    const runningCopy = cars.filter(c => c.status === 'running');
+    const ahead = runningCopy[idxA];
+    const behind = runningCopy[idxA + 1];
+    const frontTime = ahead.totalTime;
+    behind.totalTime = frontTime;
+    ahead.totalTime = frontTime + TEAM_ORDER_CUSHION;
+
+    const posA = cars.indexOf(ahead);
+    const posB = cars.indexOf(behind);
+    [cars[posA], cars[posB]] = [cars[posB], cars[posA]];
+    return {
+        ...prev,
+        cars,
+        events: [...prev.events, { lap: prev.lap, type: 'info', message: '📻 Orden de equipo: intercambio de posiciones.' }],
+    };
 }
 
 // Avanza una vuelta completa. Devuelve un nuevo RaceState (no muta el anterior).
@@ -185,7 +213,7 @@ export function advanceLap(
         }
         car.totalTime += lapTime;
         car.lastLap = lapTime;
-        car.tireAge += dryTrackDegMult(car.compound, wetness);
+        car.tireAge += PACE_MODES[car.paceMode].degMult * dryTrackDegMult(car.compound, wetness);
 
         if (pitting) {
             const compound = car.pendingPit as Compound;

@@ -46,6 +46,7 @@ export interface Circuit {
 }
 
 export type Compound = 'soft' | 'medium' | 'hard' | 'inter' | 'wet';
+export type PaceMode = 'attack' | 'normal' | 'conserve';
 
 // ===== Carrera en vivo (estado efímero, no se persiste) =====
 
@@ -65,6 +66,7 @@ export interface CarState {
     status: CarStatus;
     dnfLap?: number;
     pendingPit: Compound | null; // parada encolada para la próxima vuelta
+    paceMode: PaceMode;
 }
 
 export type RaceEventType = 'overtake' | 'pit' | 'dnf' | 'safetyCar' | 'safetyCarEnd' | 'fastestLap' | 'info' | 'weather';

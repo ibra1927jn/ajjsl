@@ -83,6 +83,15 @@ export const SC_MAX_LAPS = 4;
 export const SC_LAP_FACTOR = 1.25;       // las vueltas bajo SC son base × factor
 export const SC_COMPRESS_GAP = 1.0;      // gap máximo entre coches al reanudar
 
+// ----- Ritmo (dial del jugador) -----
+export interface PaceSpec { lapDelta: number; degMult: number; errMult: number; label: string }
+export const PACE_MODES: Record<import('../types').PaceMode, PaceSpec> = {
+    attack:   { lapDelta: -0.18, degMult: 1.45, errMult: 1.7, label: 'Atacar' },
+    normal:   { lapDelta: 0,     degMult: 1,    errMult: 1,   label: 'Normal' },
+    conserve: { lapDelta: 0.22,  degMult: 0.65, errMult: 0.7, label: 'Conservar' },
+};
+export const TEAM_ORDER_CUSHION = 0.3; // s de colchón al intercambiar posiciones
+
 // ----- Estrategia IA -----
 export const AI_STINT_JITTER = 0.15;     // ±15% sobre el stint objetivo
 export const SC_FREE_STOP_AGE = 0.6;     // la IA para bajo SC si su neumático supera este % de vida
