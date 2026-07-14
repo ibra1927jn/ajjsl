@@ -25,8 +25,35 @@ export const COMPOUNDS: Record<Compound, CompoundSpec> = {
     soft:   { offset: -0.6, degPerLap: 0.090, lifeFrac: 0.38, color: '#ff2d2d', label: 'S' },
     medium: { offset: 0,    degPerLap: 0.055, lifeFrac: 0.58, color: '#ffd12e', label: 'M' },
     hard:   { offset: 0.5,  degPerLap: 0.035, lifeFrac: 0.85, color: '#f0f0f0', label: 'H' },
+    inter:  { offset: 0.3,  degPerLap: 0.050, lifeFrac: 0.60, color: '#43b02a', label: 'I' },
+    wet:    { offset: 0.8,  degPerLap: 0.040, lifeFrac: 0.75, color: '#4aa8ff', label: 'W' },
 };
+export const SLICKS: Compound[] = ['soft', 'medium', 'hard'];
 export const CLIFF_MULTIPLIER = 3; // la degradación se multiplica al superar la vida
+
+// ----- Clima -----
+export const RAIN_CHANCE_DEFAULT = 0.22;  // prob. de que llueva en la carrera (override por circuito)
+export const WET_START_CHANCE = 0.25;     // si llueve, prob. de que la pista ya esté mojada en la salida
+export const SECOND_BURST_CHANCE = 0.35;  // prob. de una segunda ráfaga de lluvia
+export const RAIN_ACCUM_PER_LAP = 0.18;   // wetness que suma una ráfaga de intensidad 1 por vuelta
+export const DRY_RATE_PER_LAP = 0.06;     // wetness que se seca por vuelta sin lluvia
+export const WET_LAP_FRAC = 0.05;         // pérdida de vuelta a wetness 1 (fracción de baseLapSec)
+export const WET_NOISE_FACTOR = 1.0;      // el ruido gaussiano crece ×(1 + factor × wetness)
+export const SLICK_WET_COEF = 10;         // s/vuelta que paga un slick: coef × wetness²
+export const INTER_DRY_LIMIT = 0.15;      // por debajo, el inter se sobrecalienta
+export const INTER_DRY_COEF = 8;          // s/vuelta × (límite − wetness) en seco
+export const INTER_WET_LIMIT = 0.55;      // por encima, el inter aquaplanea
+export const INTER_WET_COEF = 10;         // s/vuelta × (wetness − límite)
+export const WET_BELOW_COEF = 6;          // s/vuelta que paga el wet por pista seca: coef × (0.55 − wetness)
+export const DRY_DEG_FACTOR = 3;          // deg extra de inter/wet en pista secándose (hasta ×4)
+export const TO_INTER_WETNESS = 0.22;     // la IA monta inters por encima
+export const TO_SLICK_WETNESS = 0.12;     // la IA vuelve a slicks por debajo (histéresis)
+export const TO_WET_WETNESS = 0.62;       // la IA monta wets por encima
+export const FROM_WET_WETNESS = 0.50;     // la IA baja de wets a inters por debajo
+export const CROSSOVER_JITTER = 0.05;     // jitter por coche para que no paren todos a la vez
+export const WET_ERROR_BASE = 2.0;        // errores ×(1 + base × wetness)
+export const WET_WRONG_TIRE_ERROR = 6.0;  // extra por llevar slicks en mojado
+export const WET_RACE_THRESHOLD = 0.25;   // wetness máx. que anula la parada obligatoria
 
 // ----- Vuelta de carrera -----
 export const RACE_FORM_SD = 0.12;        // sd de la "forma" por piloto y fin de semana (s/vuelta)

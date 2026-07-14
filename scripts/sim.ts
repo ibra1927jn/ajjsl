@@ -7,6 +7,8 @@ import { Rng } from '../engine/rng';
 import { simulateQualifying } from '../engine/qualifying';
 import { advanceLap, createRaceState } from '../engine/race';
 import { finalizeRace } from '../engine/results';
+import { compoundWetPenalty } from '../engine/weather';
+import { COMPOUNDS } from '../data/constants';
 
 const PLAYER = 'williams';
 const args = process.argv.slice(2);
@@ -16,8 +18,9 @@ const numArg = (name: string, def: number) => {
     return i >= 0 && args[i + 1] ? Number(args[i + 1]) : def;
 };
 
-export function runRace(game: GameState, circuitId: string, seed: number) {
-    const circuit = CIRCUITS.find(c => c.id === circuitId)!;
+export function runRace(game: GameState, circuitId: string, seed: number, rainChanceOverride?: number) {
+    const base = CIRCUITS.find(c => c.id === circuitId)!;
+    const circuit = rainChanceOverride !== undefined ? { ...base, rainChance: rainChanceOverride } : base;
     const grid = simulateQualifying(game.teams, game.drivers, circuit, new Rng(seed));
     let race = createRaceState(grid, circuit, PLAYER, seed + 1);
     let guard = 0;
@@ -35,7 +38,7 @@ function stats(race: RaceState) {
         dnfs: race.events.filter(e => e.type === 'dnf').length,
         sc: race.events.filter(e => e.type === 'safetyCar').length,
         stopsPerCar: running.reduce((s, c) => s + c.pitCount, 0) / Math.max(running.length, 1),
-        maxWet: Math.max(...((race as RaceState & { weather?: { wetness: number[] } }).weather?.wetness ?? [0])),
+        maxWet: Math.max(...race.weather.wetness),
     };
 }
 
@@ -71,13 +74,47 @@ function detail(circuitId: string, seed: number) {
     console.log(`adelantamientos=${s.overtakes} dnfs=${s.dnfs} SC=${s.sc}`);
 }
 
+// Coste por vuelta de cada compuesto a wetness fija: verifica los crossovers.
+function wetSweep() {
+    console.log('\nwetness | medium | inter | wet | mejor');
+    for (let w = 0; w <= 1.001; w += 0.05) {
+        const cost = (c: 'medium' | 'inter' | 'wet') => COMPOUNDS[c].offset + compoundWetPenalty(c, w) + 4 * w; // 4s ≈ pérdida de pista común
+        const m = cost('medium'), i = cost('inter'), we = cost('wet');
+        const best = m <= i && m <= we ? 'SLICK' : i <= we ? 'inter' : 'WET';
+        console.log(`${w.toFixed(2)}    | ${m.toFixed(2).padStart(6)} | ${i.toFixed(2).padStart(5)} | ${we.toFixed(2).padStart(4)} | ${best}`);
+    }
+}
+
+// Temporada entera con lluvia garantizada.
+function wetSeason() {
+    const game = createNewGame(PLAYER);
+    let totDnf = 0, totPits = 0, thrash = 0;
+    const wins: Record<string, number> = {};
+    for (let i = 0; i < CIRCUITS.length; i++) {
+        const { race, rec } = runRace(game, CIRCUITS[i].id, 2000 + i * 31, 1);
+        const s = stats(race);
+        totDnf += s.dnfs; totPits += s.stopsPerCar;
+        const running = race.cars.filter(c => c.status === 'running');
+        thrash += running.filter(c => c.pitCount >= 5).length;
+        const w = rec.classification[0].driverId;
+        wins[w] = (wins[w] ?? 0) + 1;
+    }
+    const n = CIRCUITS.length;
+    console.log(`\n=== Temporada 100% lluvia ===`);
+    console.log(`DNFs/carrera=${(totDnf / n).toFixed(2)} paradas/coche=${(totPits / n).toFixed(2)} coches con 5+ paradas=${thrash}`);
+    console.log('victorias:', Object.entries(wins).sort((a, b) => b[1] - a[1]).map(([d, c]) => `${d}:${c}`).join(' '));
+}
+
 if (flag('detail')) {
     detail(args[args.indexOf('--detail') + 1] ?? 'monza', numArg('seed', 42));
-} else if (!flag('wet-sweep') && !flag('resume-check') && !flag('sprint')) {
+} else if (flag('wet-sweep')) {
+    wetSweep();
+    wetSeason();
+} else if (!flag('resume-check') && !flag('sprint')) {
     detail('monza', 42);
     detail('monaco', 42);
     baseline();
 }
 
-// Los flags --wet-sweep, --sprint y --resume-check se implementan junto a sus features.
+// Los flags --sprint y --resume-check se implementan junto a sus features.
 export {};

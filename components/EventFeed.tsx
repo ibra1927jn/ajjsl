@@ -9,6 +9,7 @@ const COLORS: Record<RaceEventType, string> = {
     safetyCarEnd: 'text-gap-green',
     fastestLap: 'text-fastest-purple',
     info: 'text-text-sub',
+    weather: 'text-[#4aa8ff]',
 };
 
 export const EventFeed = ({ events }: { events: RaceEvent[] }) => {

@@ -9,10 +9,21 @@ import { QualiResult } from './qualifying';
 import { rollIncidents } from './incidents';
 import { aiDecidePits, compoundLife } from './pitstop';
 import { resolveOvertakes } from './overtaking';
+import { compoundWetPenalty, dryTrackDegMult, generateWeather, wetLapPenalty } from './weather';
+import { TO_INTER_WETNESS, TO_WET_WETNESS, WET_NOISE_FACTOR } from '../data/constants';
 import { Rng } from './rng';
 
 export function scaledLaps(circuit: Circuit): number {
     return Math.round(circuit.laps * LAP_SCALE);
+}
+
+export const COMPOUND_NAMES: Record<Compound, string> = {
+    soft: 'blandos', medium: 'medios', hard: 'duros', inter: 'intermedios', wet: 'de lluvia',
+};
+
+export interface RaceOptions {
+    lapsOverride?: number;
+    playerStartCompound?: Compound;
 }
 
 export function createRaceState(
@@ -20,13 +31,25 @@ export function createRaceState(
     circuit: Circuit,
     playerTeamId: string,
     seed: number,
+    opts: RaceOptions = {},
 ): RaceState {
     const rng = new Rng(seed);
+    const totalLaps = opts.lapsOverride ?? scaledLaps(circuit);
+    // El clima se genera PRIMERO (orden de draws fijo para reproducibilidad).
+    const wetness = generateWeather(circuit, totalLaps, rng);
+    const w0 = wetness[0];
+
     const cars: CarState[] = grid.map((q, i) => {
         let compound: Compound = 'medium';
-        if (q.teamId !== playerTeamId) {
+        if (w0 >= TO_WET_WETNESS) {
+            compound = 'wet';
+        } else if (w0 >= TO_INTER_WETNESS) {
+            compound = 'inter';
+        } else if (q.teamId !== playerTeamId) {
             const r = rng.next();
             compound = r < 0.35 ? 'soft' : r < 0.9 ? 'medium' : 'hard';
+        } else if (opts.playerStartCompound) {
+            compound = opts.playerStartCompound;
         }
         return {
             driverId: q.driverId,
@@ -42,16 +65,20 @@ export function createRaceState(
             pendingPit: null,
         };
     });
+    const startMsg = w0 >= TO_INTER_WETNESS
+        ? `🌧️ ¡Salida en mojado en ${circuit.name}! ${totalLaps} vueltas.`
+        : `Luces apagadas en ${circuit.name}. ${totalLaps} vueltas.`;
     return {
         circuitId: circuit.id,
         lap: 0,
-        totalLaps: scaledLaps(circuit),
+        totalLaps,
         cars,
-        events: [{ lap: 0, type: 'info', message: `Luces apagadas en ${circuit.name}. ${scaledLaps(circuit)} vueltas.` }],
+        events: [{ lap: 0, type: 'info', message: startMsg }],
         phase: 'green',
         safetyCarLapsLeft: 0,
         fastestLap: null,
         rngState: rng.state,
+        weather: { wetness },
     };
 }
 
@@ -61,6 +88,7 @@ function raceLapTime(
     circuit: Circuit,
     totalLaps: number,
     lap: number,
+    wetness: number,
     teams: Record<string, Team>,
     drivers: Record<string, Driver>,
     rng: Rng,
@@ -75,7 +103,7 @@ function raceLapTime(
         ? degRate * car.tireAge
         : degRate * life + degRate * CLIFF_MULTIPLIER * (car.tireAge - life);
 
-    const noiseSd = BASE_NOISE_SD * (1.6 - driver.consistency / 100);
+    const noiseSd = BASE_NOISE_SD * (1.6 - driver.consistency / 100) * (1 + WET_NOISE_FACTOR * wetness);
     const dirtyAir = gapAhead !== null && gapAhead < DIRTY_AIR_RANGE ? DIRTY_AIR_PENALTY : 0;
 
     return circuit.baseLapSec
@@ -83,6 +111,8 @@ function raceLapTime(
         + car.formOffset
         + comp.offset
         + deg
+        + wetLapPenalty(wetness, circuit.baseLapSec)
+        + compoundWetPenalty(car.compound, wetness)
         + FUEL_EFFECT * (totalLaps - lap)
         + rng.gaussian(0, noiseSd)
         + dirtyAir;
@@ -108,9 +138,23 @@ export function advanceLap(
     const lap = state.lap + 1;
     const newEvents: RaceEvent[] = [];
 
+    // 0. Clima de esta vuelta + eventos de transición.
+    const wet = state.weather.wetness;
+    const wetness = wet[Math.min(lap, wet.length - 1)];
+    const prevWetness = wet[Math.min(lap - 1, wet.length - 1)];
+    if (prevWetness < 0.05 && wetness >= 0.05) {
+        newEvents.push({ lap, type: 'weather', message: '🌧️ Empieza a llover.' });
+    } else if (prevWetness >= 0.05 && wetness < 0.05) {
+        newEvents.push({ lap, type: 'weather', message: '☀️ La pista se ha secado.' });
+    } else if (prevWetness < TO_WET_WETNESS && wetness >= TO_WET_WETNESS) {
+        newEvents.push({ lap, type: 'weather', message: '⛈️ La lluvia arrecia: pista para neumáticos de lluvia.' });
+    } else if (prevWetness >= 0.05 && wetness < prevWetness && Math.abs(wetness - TO_INTER_WETNESS) < 0.03) {
+        newEvents.push({ lap, type: 'weather', message: '🌤️ Se abre una trazada seca...' });
+    }
+
     // 1. Incidentes (solo con bandera verde).
     if (state.phase === 'green') {
-        const { dnfs, events } = rollIncidents(state.cars, teams, drivers, lap, rng);
+        const { dnfs, events } = rollIncidents(state.cars, teams, drivers, lap, wetness, rng);
         newEvents.push(...events);
         if (dnfs.length > 0 && rng.chance(SC_CHANCE_ON_DNF)) {
             state.phase = 'safetyCar';
@@ -120,7 +164,7 @@ export function advanceLap(
     }
 
     // 2. Decisiones de parada de la IA (las del jugador llegan encoladas en pendingPit).
-    aiDecidePits(state, circuit, playerTeamId, rng);
+    aiDecidePits(state, circuit, playerTeamId, wetness, rng);
 
     // 3. Tiempos de vuelta.
     const running = state.cars.filter(c => c.status === 'running');
@@ -136,12 +180,12 @@ export function advanceLap(
             lapTime = circuit.baseLapSec * SC_LAP_FACTOR + rng.gaussian(0, 0.1)
                 + (pitting ? PIT_LOSS * 0.6 : 0); // parada "barata" bajo SC
         } else {
-            lapTime = raceLapTime(car, gapsBefore[i], circuit, state.totalLaps, lap, teams, drivers, rng)
+            lapTime = raceLapTime(car, gapsBefore[i], circuit, state.totalLaps, lap, wetness, teams, drivers, rng)
                 + (pitting ? PIT_LOSS + rng.gaussian(0, PIT_LOSS_SD) : 0);
         }
         car.totalTime += lapTime;
         car.lastLap = lapTime;
-        car.tireAge += 1;
+        car.tireAge += dryTrackDegMult(car.compound, wetness);
 
         if (pitting) {
             const compound = car.pendingPit as Compound;
@@ -152,7 +196,7 @@ export function advanceLap(
             pittedThisLap.add(car.driverId);
             newEvents.push({
                 lap, type: 'pit',
-                message: `BOX: ${drivers[car.driverId].shortCode} para y monta ${COMPOUNDS[compound].label === 'S' ? 'blandos' : COMPOUNDS[compound].label === 'M' ? 'medios' : 'duros'}.`,
+                message: `BOX: ${drivers[car.driverId].shortCode} para y monta ${COMPOUND_NAMES[compound]}.`,
             });
         } else if (state.phase === 'green' && (!state.fastestLap || lapTime < state.fastestLap.time)) {
             state.fastestLap = { driverId: car.driverId, time: lapTime };

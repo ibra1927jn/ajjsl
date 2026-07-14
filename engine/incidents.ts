@@ -1,5 +1,6 @@
 import { CarState, Driver, RaceEvent, Team } from '../types';
 import { BASE_DRIVER_ERROR, BASE_MECH_DNF } from '../data/constants';
+import { wetErrorMult } from './weather';
 import { Rng } from './rng';
 
 const MECH_REASONS = ['problema hidráulico', 'fallo de motor', 'sobrecalentamiento de frenos', 'fallo en la caja de cambios', 'pérdida de potencia', 'fallo eléctrico'];
@@ -11,6 +12,7 @@ export function rollIncidents(
     teams: Record<string, Team>,
     drivers: Record<string, Driver>,
     lap: number,
+    wetness: number,
     rng: Rng,
 ): { dnfs: CarState[]; events: RaceEvent[] } {
     const dnfs: CarState[] = [];
@@ -22,7 +24,8 @@ export function rollIncidents(
         const driver = drivers[car.driverId];
 
         const pMech = BASE_MECH_DNF * (2.2 - team.car.reliability / 100);
-        const pError = BASE_DRIVER_ERROR * (1.8 - driver.consistency / 100);
+        const pError = BASE_DRIVER_ERROR * (1.8 - driver.consistency / 100)
+            * wetErrorMult(car.compound, wetness);
 
         if (rng.chance(pMech)) {
             car.status = 'dnf';

@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Circuit, Compound, Driver, RaceState, Team } from '../types';
 import { TICK_SPEEDS } from '../data/constants';
-import { advanceLap, createRaceState } from '../engine/race';
+import { advanceLap, createRaceState, RaceOptions } from '../engine/race';
 import { QualiResult } from '../engine/qualifying';
 
-// Loop de ticks de la carrera en vivo. El estado NO se persiste:
-// refrescar a mitad de carrera vuelve al estado pre-carrera.
+// Loop de ticks de la carrera en vivo.
 export function useRaceSim(
     grid: QualiResult[],
     circuit: Circuit,
@@ -13,8 +12,9 @@ export function useRaceSim(
     drivers: Record<string, Driver>,
     playerTeamId: string,
     seed: number,
+    opts: RaceOptions = {},
 ) {
-    const [race, setRace] = useState<RaceState>(() => createRaceState(grid, circuit, playerTeamId, seed));
+    const [race, setRace] = useState<RaceState>(() => createRaceState(grid, circuit, playerTeamId, seed, opts));
     const [paused, setPaused] = useState(false);
     const [speedIdx, setSpeedIdx] = useState(0);
 

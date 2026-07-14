@@ -41,9 +41,11 @@ export interface Circuit {
     baseLapSec: number;            // vuelta base en segundos
     overtakingDifficulty: number;  // 0-1 (Mónaco ~0.9, Monza ~0.2)
     tireStress: number;            // multiplicador de degradación 0.8-1.3
+    rainChance?: number;           // 0-1, default RAIN_CHANCE_DEFAULT
+    sprint?: boolean;              // fin de semana con carrera sprint
 }
 
-export type Compound = 'soft' | 'medium' | 'hard';
+export type Compound = 'soft' | 'medium' | 'hard' | 'inter' | 'wet';
 
 // ===== Carrera en vivo (estado efímero, no se persiste) =====
 
@@ -65,7 +67,7 @@ export interface CarState {
     pendingPit: Compound | null; // parada encolada para la próxima vuelta
 }
 
-export type RaceEventType = 'overtake' | 'pit' | 'dnf' | 'safetyCar' | 'safetyCarEnd' | 'fastestLap' | 'info';
+export type RaceEventType = 'overtake' | 'pit' | 'dnf' | 'safetyCar' | 'safetyCarEnd' | 'fastestLap' | 'info' | 'weather';
 
 export interface RaceEvent {
     lap: number;
@@ -83,6 +85,7 @@ export interface RaceState {
     safetyCarLapsLeft: number;
     fastestLap: { driverId: string; time: number } | null;
     rngState: number;       // estado del RNG con seed para reproducibilidad
+    weather: { wetness: number[] }; // timeline 0-1 por vuelta, precomputada con el seed
 }
 
 // ===== Resultados persistentes =====

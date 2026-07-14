@@ -1,27 +1,56 @@
 import { CarState, Circuit, Compound, RaceState } from '../types';
-import { COMPOUNDS, SC_FREE_STOP_AGE } from '../data/constants';
+import {
+    COMPOUNDS, CROSSOVER_JITTER, FROM_WET_WETNESS, SC_FREE_STOP_AGE,
+    TO_INTER_WETNESS, TO_SLICK_WETNESS, TO_WET_WETNESS,
+} from '../data/constants';
+import { isSlick } from './weather';
 import { Rng } from './rng';
 
 export function compoundLife(compound: Compound, totalLaps: number, circuit: Circuit): number {
     return (COMPOUNDS[compound].lifeFrac * totalLaps) / circuit.tireStress;
 }
 
-// Elige compuesto para las vueltas restantes: el más blando que llegue al final.
-export function chooseCompound(lapsLeft: number, totalLaps: number, circuit: Circuit): Compound {
+// Elige compuesto según agua y, en seco, el más blando que llegue al final.
+export function chooseCompound(lapsLeft: number, totalLaps: number, circuit: Circuit, wetness: number): Compound {
+    if (wetness >= TO_WET_WETNESS) return 'wet';
+    if (wetness >= TO_INTER_WETNESS) return 'inter';
     if (lapsLeft <= compoundLife('soft', totalLaps, circuit) * 1.1) return 'soft';
     if (lapsLeft <= compoundLife('medium', totalLaps, circuit) * 1.1) return 'medium';
     return 'hard';
 }
 
 // Decide las paradas de los coches IA (los del jugador solo paran por orden explícita).
-export function aiDecidePits(state: RaceState, circuit: Circuit, playerTeamId: string, rng: Rng): void {
+export function aiDecidePits(state: RaceState, circuit: Circuit, playerTeamId: string, wetness: number, rng: Rng): void {
     const lapsLeft = state.totalLaps - state.lap;
 
     for (const car of state.cars) {
         if (car.status !== 'running' || car.teamId === playerTeamId || car.pendingPit) continue;
 
+        // --- Crossovers de clima (con histéresis + jitter por coche) ---
+        const jitter = rng.next() * CROSSOVER_JITTER;
+        if (isSlick(car.compound) && wetness >= TO_INTER_WETNESS + jitter) {
+            car.pendingPit = wetness >= TO_WET_WETNESS ? 'wet' : 'inter';
+            continue;
+        }
+        if (car.compound === 'inter') {
+            if (wetness >= TO_WET_WETNESS + jitter) {
+                car.pendingPit = 'wet';
+                continue;
+            }
+            if (wetness <= TO_SLICK_WETNESS - jitter && lapsLeft > 2) {
+                car.pendingPit = chooseCompound(lapsLeft, state.totalLaps, circuit, 0);
+                continue;
+            }
+        }
+        if (car.compound === 'wet' && wetness <= FROM_WET_WETNESS - jitter && lapsLeft > 2) {
+            car.pendingPit = wetness <= TO_SLICK_WETNESS
+                ? chooseCompound(lapsLeft, state.totalLaps, circuit, 0)
+                : 'inter';
+            continue;
+        }
+
+        // --- Desgaste (lógica de seco de la v1) ---
         const life = compoundLife(car.compound, state.totalLaps, circuit);
-        // No parar en las últimas 2 vueltas salvo obligación.
         const mustTakeMandatory = car.pitCount === 0 && lapsLeft <= 5;
         if (lapsLeft <= 2 && !mustTakeMandatory) continue;
 
@@ -29,7 +58,7 @@ export function aiDecidePits(state: RaceState, circuit: Circuit, playerTeamId: s
         const scFreeStop = state.phase === 'safetyCar' && car.tireAge >= life * SC_FREE_STOP_AGE && car.pitCount === 0;
 
         if (wornOut || scFreeStop || mustTakeMandatory) {
-            car.pendingPit = chooseCompound(lapsLeft, state.totalLaps, circuit);
+            car.pendingPit = chooseCompound(lapsLeft, state.totalLaps, circuit, wetness);
         }
     }
 }

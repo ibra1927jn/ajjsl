@@ -13,7 +13,7 @@ export const TireBadge = ({ compound, age }: { compound: keyof typeof COMPOUNDS;
             >
                 {spec.label}
             </span>
-            {age !== undefined && <span className="text-[10px] text-text-sub tabular-nums">{age}</span>}
+            {age !== undefined && <span className="text-[10px] text-text-sub tabular-nums">{Math.floor(age)}</span>}
         </span>
     );
 };
