@@ -17,6 +17,7 @@ export function simulateQualifying(
     circuit: Circuit,
     rng: Rng,
     setups?: Record<string, number>,
+    qualiNoiseMults?: Record<string, number>, // efecto del ingeniero de carrera
 ): QualiResult[] {
     const results: QualiResult[] = [];
     for (const team of Object.values(teams)) {
@@ -26,7 +27,8 @@ export function simulateQualifying(
             const delta = perfDelta(team, driver) - SETUP_LAP_BONUS_MAX * setupQ;
             const noiseSd = QUALI_NOISE_BASE
                 * (1.5 - (driver.consistency * 0.5 + driver.experience * 0.5) / 100)
-                * (1 - SETUP_QUALI_NOISE_REDUCTION * setupQ);
+                * (1 - SETUP_QUALI_NOISE_REDUCTION * setupQ)
+                * (qualiNoiseMults?.[team.id] ?? 1);
             let best = Infinity;
             for (let run = 0; run < QUALI_RUNS; run++) {
                 const t = circuit.baseLapSec - 1.5 + delta + Math.abs(rng.gaussian(0, noiseSd));

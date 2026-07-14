@@ -10,6 +10,7 @@ import { finalizeRace, finalizeSprint, prizeFor } from '../engine/results';
 import { generateWeather } from '../engine/weather';
 import { scaledLaps } from '../engine/race';
 import { feedbackFor, generateSetupContext, qualityOf, SetupValues, SliderFeedback } from '../engine/setup';
+import { staffEffects, StaffEffects } from '../engine/staff';
 import { PRACTICE_RUNS, SETUP_BASE_QUALITY, SETUP_LAP_BONUS_MAX, SETUP_MAX, SETUP_MIN, SETUP_SLIDERS, SPRINT_LAP_FRACTION } from '../data/constants';
 import { clearLive, loadLive, saveLive } from '../services/livePersistence';
 import { useRaceSim } from '../hooks/useRaceSim';
@@ -50,18 +51,27 @@ export const RaceWeekend = () => {
         [seed],
     );
 
-    const grid = useMemo(
-        () => simulateQualifying(game.teams, game.drivers, circuit, new Rng(seed), setups ?? undefined),
+    // Efectos del personal por equipo (estables durante el fin de semana).
+    const staffFx = useMemo(() => {
+        const fx: Record<string, StaffEffects> = {};
+        for (const t of Object.values(game.teams)) fx[t.id] = staffEffects(t, game.staff);
+        return fx;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const grid = useMemo(() => {
+        const noiseMults: Record<string, number> = {};
+        for (const [id, fx] of Object.entries(staffFx)) noiseMults[id] = fx.qualiNoiseMult;
+        return simulateQualifying(game.teams, game.drivers, circuit, new Rng(seed), setups ?? undefined, noiseMults);
         // la parrilla se calcula una vez, tras confirmar el setup
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [seed, setups],
-    );
+    }, [seed, setups]);
 
     const mods = useMemo(() => {
         const m: RaceState['mods'] = {};
         for (const teamId of Object.keys(game.teams)) {
             const q = setups?.[teamId] ?? SETUP_BASE_QUALITY;
-            m[teamId] = { setupLapDelta: -SETUP_LAP_BONUS_MAX * q, pitLossDelta: 0 };
+            m[teamId] = { setupLapDelta: -SETUP_LAP_BONUS_MAX * q, pitLossDelta: staffFx[teamId].pitLossDelta };
         }
         return m;
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -155,6 +165,7 @@ export const RaceWeekend = () => {
                 <PracticeScreen
                     ideal={setupCtx.ideal}
                     feedbackSeeds={setupCtx.feedbackSeeds}
+                    reSkill={staffFx[game.playerTeamId].reSkill}
                     onConfirm={q => { setShowResume(false); confirmSetup(q); }}
                 />
             )}
@@ -226,9 +237,10 @@ const FEEDBACK_UI: Record<SliderFeedback, { icon: string; label: string; cls: st
 };
 
 // Práctica libre: encuentra el setup ideal con tandas limitadas de feedback.
-const PracticeScreen = ({ ideal, feedbackSeeds, onConfirm }: {
+const PracticeScreen = ({ ideal, feedbackSeeds, reSkill, onConfirm }: {
     ideal: number[];
     feedbackSeeds: number[];
+    reSkill: number;
     onConfirm: (quality: number) => void;
 }) => {
     const [values, setValues] = useState<SetupValues>(SETUP_SLIDERS.map(() => 5));
@@ -237,7 +249,7 @@ const PracticeScreen = ({ ideal, feedbackSeeds, onConfirm }: {
 
     const runPractice = () => {
         if (runsUsed >= PRACTICE_RUNS) return;
-        setFeedback(feedbackFor(values, ideal, 50, feedbackSeeds[runsUsed]));
+        setFeedback(feedbackFor(values, ideal, reSkill, feedbackSeeds[runsUsed]));
         setRunsUsed(runsUsed + 1);
     };
 

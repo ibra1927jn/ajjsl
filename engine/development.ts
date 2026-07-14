@@ -22,13 +22,15 @@ function weakestStat(car: CarStats): CarStatKey {
 
 // La IA invierte parte de sus ingresos tras cada carrera en su stat más débil,
 // respetando el cost cap anual. Muta el equipo (copia) y devuelve lo gastado.
-export function aiDevelop(team: Team, income: number, cap: number = DEV_COST_CAP, fraction: number = AI_DEV_SPEND_FRACTION): number {
+export function aiDevelop(team: Team, income: number, cap: number = DEV_COST_CAP, fraction: number = AI_DEV_SPEND_FRACTION, devDiscount = 0): number {
     let wallet = income * fraction;
     let spent = 0;
     while (true) {
         const stat = weakestStat(team.car);
         if (team.car[stat] >= STAT_CAP) break;
-        const cost = upgradeCostPerPoint(team.car[stat]) * (stat === 'reliability' ? RELIABILITY_COST_FACTOR : 1);
+        const cost = upgradeCostPerPoint(team.car[stat])
+            * (stat === 'reliability' ? RELIABILITY_COST_FACTOR : 1)
+            * (1 - devDiscount);
         if (wallet < cost || team.budget - cost < 0) break;
         if (team.devSpendSeason + cost > cap) break;
         team.car[stat] += 1;

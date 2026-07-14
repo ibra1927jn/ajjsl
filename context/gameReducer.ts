@@ -17,6 +17,7 @@ import {
     runSillySeason, salaryPerRace, signingFee, signReplacementFA,
 } from '../engine/market';
 import { computeTeamStandings } from '../engine/season';
+import { freeStaff, staffEffects, staffSalaryPerRace, staffSigningFee } from '../engine/staff';
 import { Rng } from '../engine/rng';
 import { SAVE_VERSION } from '../services/persistence';
 
@@ -82,7 +83,8 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                     if (r.teamId === team.id) prize += prizeFor(r.position);
                 }
                 const sponsor = SPONSOR_PER_RACE[team.sponsorTier];
-                const salaries = team.driverIds.reduce((sum, id) => sum + salaryPerRace(state.drivers[id]), 0);
+                const salaries = team.driverIds.reduce((sum, id) => sum + salaryPerRace(state.drivers[id]), 0)
+                    + staffSalaryPerRace(team, state.staff);
                 const income = prize + sponsor;
                 team.budget = Math.round((team.budget + income - salaries) * 10) / 10;
 
@@ -90,11 +92,12 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                     ledger.push(
                         { raceIndex: record.raceIndex, label: `${circuit.name}: premios`, amount: prize },
                         { raceIndex: record.raceIndex, label: `${circuit.name}: patrocinio`, amount: sponsor },
-                        { raceIndex: record.raceIndex, label: `${circuit.name}: salarios`, amount: -Math.round(salaries * 10) / 10 },
+                        { raceIndex: record.raceIndex, label: `${circuit.name}: salarios (pilotos y personal)`, amount: -Math.round(salaries * 10) / 10 },
                     );
                 } else {
-                    // la IA también desarrolla su coche (agresividad según dificultad)
-                    aiDevelop(team, income, DEV_COST_CAP, DIFFICULTY[state.difficulty].aiDevFraction);
+                    // la IA también desarrolla su coche (agresividad según dificultad, descuento del TD)
+                    aiDevelop(team, income, DEV_COST_CAP, DIFFICULTY[state.difficulty].aiDevFraction,
+                        staffEffects(team, state.staff).devDiscount);
                 }
             }
 
@@ -230,6 +233,35 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
             };
         }
 
+        case 'HIRE_STAFF': {
+            // Fichar personal libre; el titular actual del rol queda libre.
+            const player = state.teams[state.playerTeamId];
+            const target = state.staff[action.staffId];
+            if (!target || target.teamId !== null) return state;
+            if (player.budget < action.fee) return state;
+
+            const staff = { ...state.staff };
+            const outgoingId = player.staffIds[target.role];
+            if (outgoingId && staff[outgoingId]) {
+                staff[outgoingId] = { ...staff[outgoingId], teamId: null, contractYears: 0 };
+            }
+            staff[target.id] = { ...target, teamId: player.id, contractYears: 2 };
+
+            return {
+                ...state,
+                staff,
+                teams: {
+                    ...state.teams,
+                    [player.id]: {
+                        ...player,
+                        budget: Math.round((player.budget - action.fee) * 10) / 10,
+                        staffIds: { ...player.staffIds, [target.role]: target.id },
+                    },
+                },
+                ledger: [...state.ledger, { raceIndex: state.raceIndex, label: `Fichaje de ${target.name} (personal)`, amount: -action.fee }],
+            };
+        }
+
         case 'RENEW_DRIVER': {
             const player = state.teams[state.playerTeamId];
             const driver = state.drivers[action.driverId];
@@ -303,6 +335,37 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
             // Silly season de la IA y retiradas del fondo del pool.
             news.push(...runSillySeason(teams, drivers, state.playerTeamId, rng));
             news.push(...retireWorstFreeAgents(drivers));
+
+            // Personal: contratos que expiran y auto-fichajes de la IA.
+            const staff: Record<string, typeof state.staff[string]> = {};
+            for (const [id, m] of Object.entries(state.staff)) staff[id] = { ...m };
+            for (const m of Object.values(staff)) {
+                if (!m.teamId) continue;
+                m.contractYears -= 1;
+                if (m.contractYears <= 0) {
+                    const team = teams[m.teamId];
+                    if (team && team.staffIds[m.role] === m.id) {
+                        team.staffIds = { ...team.staffIds, [m.role]: null };
+                    }
+                    if (m.teamId === state.playerTeamId) {
+                        news.push(`${m.name} deja el equipo: contrato expirado.`);
+                    }
+                    m.teamId = null;
+                    m.contractYears = 0;
+                }
+            }
+            for (const team of Object.values(teams)) {
+                if (team.id === state.playerTeamId) continue; // el jugador ficha a mano
+                for (const role of ['td', 're', 'pc'] as const) {
+                    if (team.staffIds[role]) continue;
+                    const pool = freeStaff(staff, role).filter(m => staffSigningFee(m) <= team.budget);
+                    const pick = pool[0];
+                    if (!pick) continue;
+                    staff[pick.id] = { ...pick, teamId: team.id, contractYears: 1 + rng.int(0, 1) };
+                    team.staffIds = { ...team.staffIds, [role]: pick.id };
+                    team.budget = Math.round((team.budget - staffSigningFee(pick)) * 10) / 10;
+                }
+            }
             const playerPos = standings.findIndex(s => s.teamId === state.playerTeamId);
             const playerBonus = playerPos >= 0 && playerPos < WCC_SEASON_BONUS.length ? WCC_SEASON_BONUS[playerPos] : 10;
             const ledger = [...state.ledger, { raceIndex: 0, label: `Bonus FIA temporada ${state.season} (P${playerPos + 1} WCC)`, amount: playerBonus }];
@@ -329,6 +392,7 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                 upgradeQueue: [],
                 board: { targetPos, patience },
                 news,
+                staff,
                 ledger,
             };
         }

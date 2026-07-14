@@ -1,6 +1,6 @@
 // Harness headless de balance: simula carreras/temporadas y saca agregados.
 // Uso: npm run sim [-- --wet-sweep | --sprint | --resume-check | --seasons N]
-import { createNewGame } from '../context/gameReducer';
+import { createNewGame, gameReducer } from '../context/gameReducer';
 import { CIRCUITS } from '../data/circuits';
 import { GameState, RaceState } from '../types';
 import { Rng } from '../engine/rng';
@@ -162,7 +162,48 @@ function resumeCheck() {
     if (order(a) !== order(b)) process.exit(1);
 }
 
-if (flag('detail')) {
+// Carrera profesional de N temporadas con el reducer completo: invariantes de
+// economía, mercado, personal, junta y palmarés.
+function careerCheck(seasons: number) {
+    let g = createNewGame(PLAYER)!;
+    let races = 0;
+    for (let s = 0; s < seasons; s++) {
+        while (g.phase === 'preRace') {
+            const idx = g.raceIndex;
+            const c = CIRCUITS[idx];
+            const grid = simulateQualifying(g.teams, g.drivers, c, new Rng(3000 + races * 13));
+            let race = createRaceState(grid, c, PLAYER, 4000 + races * 7);
+            let guard = 0;
+            while (race.phase !== 'finished' && guard++ < 1000) {
+                race = advanceLap(race, c, g.teams, g.drivers, PLAYER);
+            }
+            g = gameReducer(g, { type: 'RACE_COMPLETED', record: finalizeRace(race, idx, g.season, grid[0].driverId) })!;
+            races++;
+            if (g.phase === 'gameOver') {
+                console.log(`despedido en la temporada ${g.season} tras ${races} carreras (aceptable si el jugador es pasivo)`);
+                return;
+            }
+        }
+        const budgets = Object.values(g.teams).map(t => t.budget);
+        const twoDrivers = Object.values(g.teams).every(t => t.driverIds.length === 2);
+        console.log(`Temporada ${g.season}: presupuestos min=${Math.min(...budgets).toFixed(0)} max=${Math.max(...budgets).toFixed(0)} | 2 pilotos/equipo=${twoDrivers} | history=${g.history.length}`);
+        if (Math.min(...budgets) < -20) { console.log('FALLO: colapso de presupuesto'); process.exit(1); }
+        if (!twoDrivers) { console.log('FALLO: equipo sin 2 pilotos'); process.exit(1); }
+        g = gameReducer(g, { type: 'ADVANCE_SEASON' })!;
+        const staffed = Object.values(g.teams).filter(t => t.id !== PLAYER)
+            .every(t => t.staffIds.td && t.staffIds.re && t.staffIds.pc);
+        const spread = () => {
+            const perfs = Object.values(g.teams).map(t => 0.4 * t.car.aero + 0.35 * t.car.engine + 0.25 * t.car.chassis);
+            return (Math.max(...perfs) - Math.min(...perfs)).toFixed(1);
+        };
+        console.log(`  → ${g.season}: staff IA completo=${staffed} | dispersión de coches=${spread()} | noticias=${(g.news ?? []).length}`);
+    }
+    console.log('career OK ✓');
+}
+
+if (flag('career')) {
+    careerCheck(numArg('career', 3));
+} else if (flag('detail')) {
     detail(args[args.indexOf('--detail') + 1] ?? 'monza', numArg('seed', 42));
 } else if (flag('resume-check')) {
     resumeCheck();

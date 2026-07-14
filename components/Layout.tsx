@@ -7,7 +7,7 @@ import { money } from './ui';
 const NAV = [
     { to: '/dashboard', icon: 'dashboard', label: 'Inicio' },
     { to: '/standings', icon: 'leaderboard', label: 'Mundial' },
-    { to: '/development', icon: 'construction', label: 'Coche' },
+    { to: '/development', icon: 'construction', label: 'Equipo' },
     { to: '/market', icon: 'sports_motorsports', label: 'Pilotos' },
     { to: '/finances', icon: 'payments', label: 'Finanzas' },
 ];
