@@ -10,6 +10,7 @@ import { rollIncidents } from './incidents';
 import { aiDecidePits, compoundLife } from './pitstop';
 import { resolveOvertakes } from './overtaking';
 import { compoundWetPenalty, dryTrackDegMult, generateWeather, wetLapPenalty } from './weather';
+import { collectRadio } from './radio';
 import { DRS_LAP_GAIN, DRS_RANGE, PACE_MODES, TEAM_ORDER_CUSHION, TO_INTER_WETNESS, TO_WET_WETNESS, WET_NOISE_FACTOR } from '../data/constants';
 import { Rng } from './rng';
 
@@ -273,6 +274,8 @@ export function advanceLap(
         newEvents.push({ lap, type: 'info', message: '🏁 ¡Bandera a cuadros!' });
     }
     state.events.push(...newEvents);
+    // Radio de los pilotos del jugador (Rng propio: no toca el stream principal).
+    state.events.push(...collectRadio(prev, state, circuit, playerTeamId, drivers));
     state.rngState = rng.state;
     return state;
 }
