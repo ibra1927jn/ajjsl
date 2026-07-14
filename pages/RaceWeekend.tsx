@@ -15,6 +15,7 @@ import { useRaceSim } from '../hooks/useRaceSim';
 import { TimingTower } from '../components/TimingTower';
 import { EventFeed } from '../components/EventFeed';
 import { PitControls } from '../components/PitControls';
+import { TrackMap } from '../components/TrackMap';
 import { Button, Card, SectionTitle, TeamStripe, formatLapTime, money } from '../components/ui';
 
 type Step = 'quali' | 'sprint' | 'sprintResults' | 'race' | 'results';
@@ -301,6 +302,8 @@ const SessionRunner = ({ kind, grid, circuit, teams, drivers, playerTeamId, seed
 
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
                 <div className="lg:col-span-3 space-y-3">
+                    <TrackMap race={race} teams={teams} playerTeamId={playerTeamId}
+                        tickMs={TICK_SPEEDS[speedIdx].ms} paused={paused} avgLapSec={circuit.baseLapSec} />
                     <TimingTower race={race} teams={teams} drivers={drivers} playerTeamId={playerTeamId} />
                 </div>
                 <div className="lg:col-span-2 space-y-3">
