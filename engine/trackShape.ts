@@ -1,4 +1,5 @@
 import { Rng } from './rng';
+import { TRACK_PATHS } from '../data/trackPaths';
 
 // Trazado estilizado y estable por circuito: spline cerrada (Catmull-Rom → Bézier)
 // sobre una elipse con jitter radial, sembrada con el hash del id del circuito.
@@ -13,6 +14,9 @@ function hashId(id: string): number {
 const cache = new Map<string, string>();
 
 export function trackPath(circuitId: string): string {
+    // Trazado real aproximado si existe; si no, forma generada estable.
+    const real = TRACK_PATHS[circuitId];
+    if (real) return real;
     const cached = cache.get(circuitId);
     if (cached) return cached;
 
