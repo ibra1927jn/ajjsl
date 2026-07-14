@@ -25,6 +25,7 @@ export interface RaceOptions {
     kind?: SessionKind;
     lapsOverride?: number;
     playerStartCompound?: Compound;
+    mods?: RaceState['mods'];
 }
 
 export function createRaceState(
@@ -84,6 +85,7 @@ export function createRaceState(
         rngState: rng.state,
         weather: { wetness },
         kind: opts.kind ?? 'race',
+        mods: opts.mods ?? {},
     };
 }
 
@@ -94,6 +96,7 @@ function raceLapTime(
     totalLaps: number,
     lap: number,
     wetness: number,
+    mods: RaceState['mods'],
     teams: Record<string, Team>,
     drivers: Record<string, Driver>,
     rng: Rng,
@@ -115,6 +118,7 @@ function raceLapTime(
         + perfDelta(team, driver)
         + car.formOffset
         + comp.offset
+        + (mods[car.teamId]?.setupLapDelta ?? 0)
         + PACE_MODES[car.paceMode].lapDelta
         + deg
         + wetLapPenalty(wetness, circuit.baseLapSec)
@@ -221,9 +225,10 @@ export function advanceLap(
             lapTime = circuit.baseLapSec * SC_LAP_FACTOR + rng.gaussian(0, 0.1)
                 + (pitting ? PIT_LOSS * 0.6 : 0); // parada "barata" bajo SC
         } else {
-            lapTime = raceLapTime(car, gapsBefore[i], circuit, state.totalLaps, lap, wetness, teams, drivers, rng)
+            const pitLoss = PIT_LOSS + (state.mods[car.teamId]?.pitLossDelta ?? 0);
+            lapTime = raceLapTime(car, gapsBefore[i], circuit, state.totalLaps, lap, wetness, state.mods, teams, drivers, rng)
                 - (drsSet.has(car.driverId) ? DRS_LAP_GAIN : 0)
-                + (pitting ? PIT_LOSS + rng.gaussian(0, PIT_LOSS_SD) : 0);
+                + (pitting ? pitLoss + rng.gaussian(0, PIT_LOSS_SD) : 0);
         }
         car.totalTime += lapTime;
         car.lastLap = lapTime;

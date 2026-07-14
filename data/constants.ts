@@ -65,6 +65,22 @@ export const PIT_LOSS = 22;              // s perdidos por parada
 export const PIT_LOSS_SD = 0.8;
 export const MANDATORY_PIT_PENALTY = 10; // s añadidos en meta si no se paró
 
+// ----- Práctica libre y setup -----
+export const SETUP_SLIDERS = [
+    { key: 'aero', label: 'Alerones' },
+    { key: 'susp', label: 'Suspensión' },
+    { key: 'gear', label: 'Marchas' },
+] as const;
+export const SETUP_MIN = 1;
+export const SETUP_MAX = 10;
+export const PRACTICE_RUNS = 3;              // tandas de libres disponibles
+export const SETUP_LAP_BONUS_MAX = 0.25;     // s/vuelta con setup perfecto (todo el finde)
+export const SETUP_QUALI_NOISE_REDUCTION = 0.2;
+export const SETUP_BASE_QUALITY = 0.5;       // calidad del "setup base" (saltarse los libres)
+export const SETUP_OK_TOLERANCE = 1.0;       // a esta distancia del ideal el feedback dice "ok"
+export const AI_SETUP_MEAN = 0.62;           // calidad media de setup de la IA
+export const AI_SETUP_SD = 0.18;             // (sesgada por experiencia del primer piloto)
+
 // ----- Clasificación (quali) -----
 export const QUALI_RUNS = 3;
 export const QUALI_NOISE_BASE = 0.45; // sd por run, reducido por consistencia+experiencia

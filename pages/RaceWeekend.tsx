@@ -9,7 +9,8 @@ import { QualiResult, simulateQualifying } from '../engine/qualifying';
 import { finalizeRace, finalizeSprint, prizeFor } from '../engine/results';
 import { generateWeather } from '../engine/weather';
 import { scaledLaps } from '../engine/race';
-import { SPRINT_LAP_FRACTION } from '../data/constants';
+import { feedbackFor, generateSetupContext, qualityOf, SetupValues, SliderFeedback } from '../engine/setup';
+import { PRACTICE_RUNS, SETUP_BASE_QUALITY, SETUP_LAP_BONUS_MAX, SETUP_MAX, SETUP_MIN, SETUP_SLIDERS, SPRINT_LAP_FRACTION } from '../data/constants';
 import { clearLive, loadLive, saveLive } from '../services/livePersistence';
 import { useRaceSim } from '../hooks/useRaceSim';
 import { TimingTower } from '../components/TimingTower';
@@ -18,7 +19,7 @@ import { PitControls } from '../components/PitControls';
 import { TrackMap } from '../components/TrackMap';
 import { Button, Card, SectionTitle, TeamStripe, formatLapTime, money } from '../components/ui';
 
-type Step = 'quali' | 'sprint' | 'sprintResults' | 'race' | 'results';
+type Step = 'practice' | 'quali' | 'sprint' | 'sprintResults' | 'race' | 'results';
 
 export const RaceWeekend = () => {
     const { game, dispatch } = useActiveGame();
@@ -29,10 +30,11 @@ export const RaceWeekend = () => {
     // Guardado en vivo: si hay una sesión a medias de ESTE fin de semana, se ofrece reanudar.
     const [live] = useState(() => loadLive(game.season, game.raceIndex));
     const [seed] = useState(() => live?.seed ?? Math.floor(Math.random() * 2 ** 31));
-    const [step, setStep] = useState<Step>('quali');
+    const [step, setStep] = useState<Step>('practice');
     const [record, setRecord] = useState<RaceResultRecord | null>(null);
     const [sprintResult, setSprintResult] = useState<DriverResult[] | null>(live?.sprintResult ?? null);
     const [startCompound, setStartCompound] = useState<Compound>(live?.startCompound ?? 'medium');
+    const [setups, setSetups] = useState<Record<string, number> | null>(live?.setups ?? null);
     const [resumeState, setResumeState] = useState<RaceState | null>(null);
     const [showResume, setShowResume] = useState(live !== null);
 
@@ -41,12 +43,34 @@ export const RaceWeekend = () => {
     // Seeds por sesión: quali=seed, sprint=seed+1, carrera=seed+2 (o seed+1 sin sprint).
     const raceSeed = isSprint ? seed + 2 : seed + 1;
 
-    const grid = useMemo(
-        () => simulateQualifying(game.teams, game.drivers, circuit, new Rng(seed)),
-        // la parrilla se calcula una vez con el estado al llegar al circuito
+    // Contexto de setup del finde (ideal oculto + calidades IA), stream propio.
+    const setupCtx = useMemo(
+        () => generateSetupContext(seed, game.teams, game.drivers, game.playerTeamId),
         // eslint-disable-next-line react-hooks/exhaustive-deps
         [seed],
     );
+
+    const grid = useMemo(
+        () => simulateQualifying(game.teams, game.drivers, circuit, new Rng(seed), setups ?? undefined),
+        // la parrilla se calcula una vez, tras confirmar el setup
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [seed, setups],
+    );
+
+    const mods = useMemo(() => {
+        const m: RaceState['mods'] = {};
+        for (const teamId of Object.keys(game.teams)) {
+            const q = setups?.[teamId] ?? SETUP_BASE_QUALITY;
+            m[teamId] = { setupLapDelta: -SETUP_LAP_BONUS_MAX * q, pitLossDelta: 0 };
+        }
+        return m;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [setups]);
+
+    const confirmSetup = (quality: number) => {
+        setSetups({ ...setupCtx.aiQuality, [game.playerTeamId]: quality });
+        setStep('quali');
+    };
     // Mismo seed y orden de draws que createRaceState → el pronóstico refleja la carrera real.
     const forecast = useMemo(
         () => generateWeather(circuit, scaledLaps(circuit), new Rng(raceSeed)),
@@ -71,7 +95,7 @@ export const RaceWeekend = () => {
     const onSprintFinished = (raceState: RaceState) => {
         const res = finalizeSprint(raceState);
         setSprintResult(res);
-        saveLive({ season: game.season, raceIndex, seed, step: 'sprintResults', startCompound, sprintResult: res, raceState: null });
+        saveLive({ season: game.season, raceIndex, seed, step: 'sprintResults', startCompound, sprintResult: res, raceState: null, setups });
         setStep('sprintResults');
     };
 
@@ -85,7 +109,7 @@ export const RaceWeekend = () => {
     };
 
     const saveLap = (liveStep: 'sprint' | 'race') => (state: RaceState) => {
-        saveLive({ season: game.season, raceIndex, seed, step: liveStep, startCompound, sprintResult, raceState: state });
+        saveLive({ season: game.season, raceIndex, seed, step: liveStep, startCompound, sprintResult, raceState: state, setups });
     };
 
     const resumeNow = () => {
@@ -127,16 +151,24 @@ export const RaceWeekend = () => {
                     </div>
                 </Card>
             )}
+            {step === 'practice' && (
+                <PracticeScreen
+                    ideal={setupCtx.ideal}
+                    feedbackSeeds={setupCtx.feedbackSeeds}
+                    onConfirm={q => { setShowResume(false); confirmSetup(q); }}
+                />
+            )}
             {step === 'quali' && (
                 <QualiScreen grid={grid} teams={game.teams} drivers={game.drivers}
                     playerTeamId={game.playerTeamId} forecast={forecast}
+                    setupQuality={setups?.[game.playerTeamId] ?? SETUP_BASE_QUALITY}
                     startCompound={startCompound} onStartCompound={setStartCompound}
                     startLabel={isSprint ? '🏁 Comenzar sprint' : '🏁 Comenzar carrera'}
                     onStart={() => { setShowResume(false); setStep(isSprint ? 'sprint' : 'race'); }} />
             )}
             {step === 'sprint' && (
                 <SessionRunner kind="sprint" grid={grid} circuit={circuit} teams={game.teams} drivers={game.drivers}
-                    playerTeamId={game.playerTeamId} seed={seed + 1}
+                    playerTeamId={game.playerTeamId} seed={seed + 1} mods={mods}
                     lapsOverride={Math.max(5, Math.round(scaledLaps(circuit) * SPRINT_LAP_FRACTION))}
                     startCompound={startCompound} initial={resumeState} onLap={saveLap('sprint')}
                     onFinished={onSprintFinished} />
@@ -147,7 +179,7 @@ export const RaceWeekend = () => {
             )}
             {step === 'race' && (
                 <SessionRunner kind="race" grid={raceGrid} circuit={circuit} teams={game.teams} drivers={game.drivers}
-                    playerTeamId={game.playerTeamId} seed={raceSeed}
+                    playerTeamId={game.playerTeamId} seed={raceSeed} mods={mods}
                     startCompound={startCompound} initial={resumeState} onLap={saveLap('race')}
                     onFinished={onRaceFinished} />
             )}
@@ -187,12 +219,91 @@ const SprintResults = ({ classification, teams, drivers, playerTeamId, onContinu
 
 const FORECAST_ICON = (w: number) => (w < 0.05 ? '☀️' : w < TO_INTER_WETNESS ? '🌦️' : '🌧️');
 
-const QualiScreen = ({ grid, teams, drivers, playerTeamId, forecast, startCompound, onStartCompound, startLabel, onStart }: {
+const FEEDBACK_UI: Record<SliderFeedback, { icon: string; label: string; cls: string }> = {
+    up: { icon: '▲', label: 'subir', cls: 'text-pit-yellow' },
+    down: { icon: '▼', label: 'bajar', cls: 'text-pit-yellow' },
+    ok: { icon: '✓', label: 'bien', cls: 'text-gap-green' },
+};
+
+// Práctica libre: encuentra el setup ideal con tandas limitadas de feedback.
+const PracticeScreen = ({ ideal, feedbackSeeds, onConfirm }: {
+    ideal: number[];
+    feedbackSeeds: number[];
+    onConfirm: (quality: number) => void;
+}) => {
+    const [values, setValues] = useState<SetupValues>(SETUP_SLIDERS.map(() => 5));
+    const [runsUsed, setRunsUsed] = useState(0);
+    const [feedback, setFeedback] = useState<SliderFeedback[] | null>(null);
+
+    const runPractice = () => {
+        if (runsUsed >= PRACTICE_RUNS) return;
+        setFeedback(feedbackFor(values, ideal, 50, feedbackSeeds[runsUsed]));
+        setRunsUsed(runsUsed + 1);
+    };
+
+    const quality = qualityOf(values, ideal);
+
+    return (
+        <div className="space-y-4">
+            <SectionTitle>Práctica libre · Setup</SectionTitle>
+            <Card>
+                <p className="text-xs text-text-sub mb-4">
+                    Ajusta el coche y rueda tandas de libres: tus pilotos te dirán por dónde van los ajustes.
+                    Un buen setup vale décimas durante todo el fin de semana. Tienes {PRACTICE_RUNS} tandas.
+                </p>
+                <div className="space-y-4">
+                    {SETUP_SLIDERS.map((s, i) => (
+                        <div key={s.key}>
+                            <div className="flex justify-between text-sm mb-1">
+                                <span className="font-semibold">{s.label}</span>
+                                <span className="tabular-nums flex items-center gap-2">
+                                    {feedback && (
+                                        <span className={`text-xs font-bold ${FEEDBACK_UI[feedback[i]].cls}`}>
+                                            {FEEDBACK_UI[feedback[i]].icon} {FEEDBACK_UI[feedback[i]].label}
+                                        </span>
+                                    )}
+                                    {values[i]}
+                                </span>
+                            </div>
+                            <input
+                                type="range"
+                                min={SETUP_MIN}
+                                max={SETUP_MAX}
+                                value={values[i]}
+                                onChange={e => {
+                                    const next = [...values];
+                                    next[i] = Number(e.target.value);
+                                    setValues(next);
+                                    setFeedback(null); // el feedback era para los valores anteriores
+                                }}
+                                className="w-full accent-[#e10600]"
+                            />
+                        </div>
+                    ))}
+                </div>
+            </Card>
+            <div className="flex gap-2">
+                <Button variant="ghost" className="flex-1" disabled={runsUsed >= PRACTICE_RUNS} onClick={runPractice}>
+                    🔧 Rodar libres ({PRACTICE_RUNS - runsUsed})
+                </Button>
+                <Button className="flex-1" onClick={() => onConfirm(quality)}>
+                    Confirmar setup →
+                </Button>
+            </div>
+            <button onClick={() => onConfirm(SETUP_BASE_QUALITY)} className="w-full text-xs text-text-sub underline hover:text-text-main">
+                Saltar y usar setup base
+            </button>
+        </div>
+    );
+};
+
+const QualiScreen = ({ grid, teams, drivers, playerTeamId, forecast, setupQuality, startCompound, onStartCompound, startLabel, onStart }: {
     grid: QualiResult[];
     teams: Record<string, Team>;
     drivers: Record<string, Driver>;
     playerTeamId: string;
     forecast: number[];
+    setupQuality: number;
     startCompound: Compound;
     onStartCompound: (c: Compound) => void;
     startLabel: string;
@@ -207,7 +318,12 @@ const QualiScreen = ({ grid, teams, drivers, playerTeamId, forecast, startCompou
 
     return (
     <div className="space-y-4">
-        <SectionTitle>Clasificación</SectionTitle>
+        <div className="flex items-center justify-between">
+            <SectionTitle>Clasificación</SectionTitle>
+            <span className={`text-xs font-bold ${setupQuality >= 0.75 ? 'text-gap-green' : setupQuality >= 0.45 ? 'text-pit-yellow' : 'text-danger'}`}>
+                Setup: {setupQuality >= 0.75 ? 'óptimo' : setupQuality >= 0.45 ? 'aceptable' : 'flojo'}
+            </span>
+        </div>
         <div className="bg-card-darker rounded-2xl border border-border-dark overflow-hidden">
             {grid.map((q, i) => (
                 <div key={q.driverId}
@@ -250,7 +366,7 @@ const QualiScreen = ({ grid, teams, drivers, playerTeamId, forecast, startCompou
     );
 };
 
-const SessionRunner = ({ kind, grid, circuit, teams, drivers, playerTeamId, seed, lapsOverride, startCompound, initial, onLap, onFinished }: {
+const SessionRunner = ({ kind, grid, circuit, teams, drivers, playerTeamId, seed, lapsOverride, startCompound, mods, initial, onLap, onFinished }: {
     kind: SessionKind;
     grid: QualiResult[];
     circuit: Circuit;
@@ -260,13 +376,14 @@ const SessionRunner = ({ kind, grid, circuit, teams, drivers, playerTeamId, seed
     seed: number;
     lapsOverride?: number;
     startCompound: Compound;
+    mods: RaceState['mods'];
     initial?: RaceState | null;
     onLap?: (state: RaceState) => void;
     onFinished: (raceState: RaceState) => void;
 }) => {
     const { race, paused, setPaused, speedIdx, setSpeedIdx, queuePit, setPaceMode, requestSwap } = useRaceSim(
         grid, circuit, teams, drivers, playerTeamId, seed,
-        { kind, lapsOverride, playerStartCompound: startCompound, initial, onLap });
+        { kind, lapsOverride, playerStartCompound: startCompound, mods, initial, onLap });
     const finished = race.phase === 'finished';
     const wetness = race.weather.wetness[Math.min(race.lap, race.weather.wetness.length - 1)];
 
