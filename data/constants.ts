@@ -119,9 +119,11 @@ export const DEV_COST_CAP = 60;                // $M máximos de desarrollo por 
 
 // ----- Junta directiva -----
 export const BOARD_START_PATIENCE = 70;
-export const PATIENCE_GAIN_PER_RACE = 2;       // si cumples el objetivo
-export const PATIENCE_LOSS_PER_RACE = 4;       // × déficit de posiciones (cap abajo)
-export const PATIENCE_LOSS_CAP = 12;
+export const BOARD_TARGET_SLACK = 1;           // objetivo = rango del coche + margen
+export const BOARD_GRACE_RACES = 4;            // sin castigo en las primeras carreras (standings ruidosos)
+export const PATIENCE_GAIN_PER_RACE = 3;       // si cumples el objetivo
+export const PATIENCE_LOSS_PER_RACE = 3;       // × déficit de posiciones (cap abajo)
+export const PATIENCE_LOSS_CAP = 9;
 export const BOARD_SEASON_BONUS_PATIENCE = 20; // al cumplir el objetivo de temporada
 export const BOARD_MET_BUDGET_BONUS = 15;      // $M extra al cumplir el objetivo
 

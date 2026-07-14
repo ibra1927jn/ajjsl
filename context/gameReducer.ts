@@ -2,7 +2,12 @@ import { Driver, GameAction, GameState, Team } from '../types';
 import { TEAMS } from '../data/teams';
 import { DRIVERS } from '../data/drivers';
 import { CIRCUITS } from '../data/circuits';
-import { BOARD_START_PATIENCE, DEV_COST_CAP, SPONSOR_PER_RACE, STAT_CAP, UPGRADE_LEAD_RACES } from '../data/constants';
+import {
+    BOARD_GRACE_RACES, BOARD_MET_BUDGET_BONUS, BOARD_SEASON_BONUS_PATIENCE, BOARD_START_PATIENCE,
+    BOARD_TARGET_SLACK, DEV_COST_CAP,
+    PATIENCE_GAIN_PER_RACE, PATIENCE_LOSS_CAP, PATIENCE_LOSS_PER_RACE,
+    SPONSOR_PER_RACE, STAT_CAP, UPGRADE_LEAD_RACES,
+} from '../data/constants';
 import { prizeFor } from '../engine/results';
 import { aiDevelop } from '../engine/development';
 import { carPerformance } from '../engine/performance';
@@ -19,7 +24,7 @@ export function createNewGame(playerTeamId: string): GameState {
     const drivers: Record<string, Driver> = {};
     for (const d of DRIVERS) drivers[d.id] = { ...d };
     const ranked = Object.values(teams).sort((a, b) => carPerformance(b.car) - carPerformance(a.car));
-    const targetPos = Math.max(1, ranked.findIndex(t => t.id === playerTeamId) + 1);
+    const targetPos = Math.min(10, Math.max(1, ranked.findIndex(t => t.id === playerTeamId) + 1 + BOARD_TARGET_SLACK));
     return {
         saveVersion: SAVE_VERSION,
         playerTeamId,
@@ -91,14 +96,30 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                 ledger.push({ raceIndex, label: `Mejora de ${order.stat} (+${order.points}) montada en el coche`, amount: 0 });
             }
 
+            // La junta evalúa tras cada carrera contra el objetivo de constructores.
+            // Periodo de gracia al inicio de temporada: los standings tempranos son ruido.
+            const results = [...state.results, record];
+            const wcc = computeTeamStandings(results);
+            const playerWccPos = wcc.findIndex(s => s.teamId === state.playerTeamId) + 1;
+            const shortfall = Math.max(0, playerWccPos - state.board.targetPos);
+            const inGrace = results.length <= BOARD_GRACE_RACES;
+            const patience = Math.max(0, Math.min(100,
+                shortfall === 0
+                    ? state.board.patience + PATIENCE_GAIN_PER_RACE
+                    : inGrace
+                        ? state.board.patience
+                        : state.board.patience - Math.min(PATIENCE_LOSS_CAP, PATIENCE_LOSS_PER_RACE * shortfall)));
+            const fired = patience <= 0;
+
             return {
                 ...state,
                 teams,
                 ledger,
-                results: [...state.results, record],
+                results,
                 raceIndex,
                 upgradeQueue: pending,
-                phase: raceIndex >= CIRCUITS.length ? 'postSeason' : 'preRace',
+                board: { ...state.board, patience },
+                phase: fired ? 'gameOver' : raceIndex >= CIRCUITS.length ? 'postSeason' : 'preRace',
             };
         }
 
@@ -183,6 +204,19 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
             }
             const playerPos = standings.findIndex(s => s.teamId === state.playerTeamId);
             const playerBonus = playerPos >= 0 && playerPos < WCC_SEASON_BONUS.length ? WCC_SEASON_BONUS[playerPos] : 10;
+            const ledger = [...state.ledger, { raceIndex: 0, label: `Bonus FIA temporada ${state.season} (P${playerPos + 1} WCC)`, amount: playerBonus }];
+
+            // Veredicto de la junta y nuevo objetivo según el coche de la nueva temporada.
+            const metTarget = playerPos + 1 <= state.board.targetPos;
+            let patience = state.board.patience;
+            if (metTarget) {
+                patience = Math.min(100, patience + BOARD_SEASON_BONUS_PATIENCE);
+                teams[state.playerTeamId].budget = Math.round((teams[state.playerTeamId].budget + BOARD_MET_BUDGET_BONUS) * 10) / 10;
+                ledger.push({ raceIndex: 0, label: 'Bonus de la junta por cumplir el objetivo', amount: BOARD_MET_BUDGET_BONUS });
+            }
+            const ranked = Object.values(teams).sort((a, b) => carPerformance(b.car) - carPerformance(a.car));
+            const targetPos = Math.min(10, Math.max(1, ranked.findIndex(t => t.id === state.playerTeamId) + 1 + BOARD_TARGET_SLACK));
+
             return {
                 ...state,
                 season: state.season + 1,
@@ -192,7 +226,8 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                 drivers,
                 phase: 'preRace',
                 upgradeQueue: [],
-                ledger: [...state.ledger, { raceIndex: 0, label: `Bonus FIA temporada ${state.season} (P${playerPos + 1} WCC)`, amount: playerBonus }],
+                board: { targetPos, patience },
+                ledger,
             };
         }
 

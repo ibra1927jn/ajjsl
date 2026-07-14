@@ -58,6 +58,32 @@ export const Dashboard = () => {
                 </Card>
             )}
 
+            <Card>
+                <div className="flex items-center justify-between mb-2">
+                    <div>
+                        <p className="text-xs text-text-sub uppercase font-bold tracking-wider">Junta directiva</p>
+                        <p className="text-sm">
+                            Objetivo: <span className="font-bold">P{game.board.targetPos}</span> en constructores
+                            {game.results.length > 0 && playerPos >= 0 && (
+                                <span className={playerPos + 1 <= game.board.targetPos ? ' text-gap-green' : ' text-danger'}>
+                                    {' '}· vas P{playerPos + 1}
+                                </span>
+                            )}
+                        </p>
+                    </div>
+                    <span className={`text-lg font-extrabold tabular-nums ${game.board.patience > 40 ? 'text-gap-green' : game.board.patience > 20 ? 'text-pit-yellow' : 'text-danger'}`}>
+                        {game.board.patience}
+                    </span>
+                </div>
+                <div className="h-2 bg-card-darker rounded-full overflow-hidden">
+                    <div className="h-full rounded-full transition-all" style={{
+                        width: `${game.board.patience}%`,
+                        background: game.board.patience > 40 ? '#00d26a' : game.board.patience > 20 ? '#ffd12e' : '#ff4d4d',
+                    }} />
+                </div>
+                <p className="text-[11px] text-text-sub mt-1">Paciencia de la junta: si llega a 0, estás despedido.</p>
+            </Card>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Card>
                     <SectionTitle>Tu coche</SectionTitle>

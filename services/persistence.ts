@@ -1,6 +1,6 @@
 import { GameState, Team } from '../types';
 import { carPerformance } from '../engine/performance';
-import { BOARD_START_PATIENCE } from '../data/constants';
+import { BOARD_START_PATIENCE, BOARD_TARGET_SLACK } from '../data/constants';
 
 export const SAVE_VERSION = 2;
 const KEY = 'f1m_save';
@@ -17,7 +17,7 @@ const migrations: Record<number, (old: unknown) => unknown> = {
         }
         const ranked = Object.values(teams)
             .sort((a, b) => carPerformance(b.car) - carPerformance(a.car));
-        const targetPos = Math.max(1, ranked.findIndex(t => t.id === s.playerTeamId) + 1);
+        const targetPos = Math.min(10, Math.max(1, ranked.findIndex(t => t.id === s.playerTeamId) + 1 + BOARD_TARGET_SLACK));
         return {
             ...s,
             saveVersion: 2,
