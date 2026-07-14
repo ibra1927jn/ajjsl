@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 import { CIRCUITS } from '../data/circuits';
 import { money } from './ui';
@@ -11,6 +11,55 @@ const NAV = [
     { to: '/market', icon: 'sports_motorsports', label: 'Pilotos' },
     { to: '/finances', icon: 'payments', label: 'Finanzas' },
 ];
+
+const SettingsMenu = () => {
+    const { dispatch } = useGame();
+    const navigate = useNavigate();
+    const [open, setOpen] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(false);
+
+    const close = () => { setOpen(false); setConfirmDelete(false); };
+
+    return (
+        <div className="relative">
+            <button
+                onClick={() => (open ? close() : setOpen(true))}
+                className="text-text-sub hover:text-text-main text-base leading-none"
+                aria-label="Ajustes"
+            >
+                ⚙️
+            </button>
+            {open && (
+                <>
+                    <div className="fixed inset-0 z-40" onClick={close} />
+                    <div className="absolute right-0 top-8 z-50 bg-card-dark border border-border-dark rounded-xl shadow-lg py-1 w-52">
+                        <button
+                            onClick={() => { close(); navigate('/'); }}
+                            className="w-full text-left px-4 py-2 text-sm hover:bg-card-darker"
+                        >
+                            🏁 Nueva partida
+                        </button>
+                        {confirmDelete ? (
+                            <button
+                                onClick={() => { close(); dispatch({ type: 'RESET' }); navigate('/'); }}
+                                className="w-full text-left px-4 py-2 text-sm text-danger font-bold hover:bg-card-darker"
+                            >
+                                ¿Seguro? Borrar para siempre
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => setConfirmDelete(true)}
+                                className="w-full text-left px-4 py-2 text-sm text-danger hover:bg-card-darker"
+                            >
+                                🗑️ Borrar partida
+                            </button>
+                        )}
+                    </div>
+                </>
+            )}
+        </div>
+    );
+};
 
 export const Layout = ({ children }: { children: React.ReactNode }) => {
     const { game } = useGame();
@@ -24,7 +73,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                         <span className="bg-f1-red text-white font-extrabold italic px-2 py-0.5 rounded">F1</span>
                         <span className="font-bold">Manager</span>
                     </Link>
-                    <div className="flex items-center gap-4 text-sm">
+                    <div className="flex items-center gap-3 text-sm">
                         <span className="text-text-sub hidden sm:inline">
                             {game.season} · Ronda {Math.min(game.raceIndex + 1, CIRCUITS.length)}/{CIRCUITS.length}
                         </span>
@@ -32,6 +81,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                             {game.teams[game.playerTeamId].shortName}
                         </span>
                         <span className="text-gap-green font-semibold tabular-nums">{money(game.teams[game.playerTeamId].budget)}</span>
+                        <SettingsMenu />
                     </div>
                 </header>
             )}

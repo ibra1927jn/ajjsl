@@ -1,6 +1,7 @@
 import { GameState, Team } from '../types';
 import { carPerformance } from '../engine/performance';
 import { BOARD_START_PATIENCE, BOARD_TARGET_SLACK } from '../data/constants';
+import { clearLive } from './livePersistence';
 
 export const SAVE_VERSION = 2;
 const KEY = 'f1m_save';
@@ -67,4 +68,5 @@ export function clearSave(): void {
     } catch {
         // sin acceso a localStorage: nada que borrar
     }
+    clearLive(); // una carrera a medias sin partida no tiene sentido
 }

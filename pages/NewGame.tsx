@@ -1,19 +1,27 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 import { TEAMS } from '../data/teams';
 import { DRIVERS } from '../data/drivers';
 import { carPerformance } from '../engine/performance';
+import { clearLive } from '../services/livePersistence';
 import { Button, Card, money } from '../components/ui';
 
 export const NewGame = () => {
     const { game, dispatch } = useGame();
     const navigate = useNavigate();
+    // Modal propio: window.confirm está bloqueado en iframes con sandbox (artifacts).
+    const [confirmTeamId, setConfirmTeamId] = useState<string | null>(null);
 
-    const pickTeam = (teamId: string) => {
-        if (game && !window.confirm('Ya tienes una partida guardada. ¿Empezar de cero y borrarla?')) return;
+    const startGame = (teamId: string) => {
+        clearLive(); // que no quede una carrera a medias de la partida anterior
         dispatch({ type: 'NEW_GAME', playerTeamId: teamId });
         navigate('/dashboard');
+    };
+
+    const pickTeam = (teamId: string) => {
+        if (game) setConfirmTeamId(teamId);
+        else startGame(teamId);
     };
 
     return (
@@ -58,6 +66,25 @@ export const NewGame = () => {
                     );
                 })}
             </div>
+
+            {confirmTeamId && (
+                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => setConfirmTeamId(null)}>
+                    <div className="bg-card-dark border border-border-dark rounded-2xl p-5 max-w-sm w-full" onClick={e => e.stopPropagation()}>
+                        <h3 className="font-bold mb-1">¿Empezar de cero?</h3>
+                        <p className="text-sm text-text-sub mb-4">
+                            Ya tienes una partida guardada
+                            {game && <> con <span className="font-semibold text-text-main">{game.teams[game.playerTeamId].shortName}</span> (temporada {game.season}, ronda {game.raceIndex + 1})</>}.
+                            Se borrará para siempre.
+                        </p>
+                        <div className="space-y-2">
+                            <Button variant="danger" className="w-full" onClick={() => startGame(confirmTeamId)}>
+                                Borrar y empezar con {TEAMS.find(t => t.id === confirmTeamId)?.shortName}
+                            </Button>
+                            <Button variant="ghost" className="w-full" onClick={() => setConfirmTeamId(null)}>Cancelar</Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
