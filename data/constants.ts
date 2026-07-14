@@ -114,9 +114,23 @@ export const upgradeCostPerPoint = (level: number) => 2 + level / 25; // $M por 
 export const RELIABILITY_COST_FACTOR = 0.6;    // fiabilidad más barata
 export const STAT_CAP = 99;
 export const AI_DEV_SPEND_FRACTION = 0.55;     // % de sus ingresos que la IA invierte en coche
+export const UPGRADE_LEAD_RACES = 2;           // carreras que tarda una mejora en fabricarse
+export const DEV_COST_CAP = 60;                // $M máximos de desarrollo por temporada (todos)
+
+// ----- Junta directiva -----
+export const BOARD_START_PATIENCE = 70;
+export const PATIENCE_GAIN_PER_RACE = 2;       // si cumples el objetivo
+export const PATIENCE_LOSS_PER_RACE = 4;       // × déficit de posiciones (cap abajo)
+export const PATIENCE_LOSS_CAP = 12;
+export const BOARD_SEASON_BONUS_PATIENCE = 20; // al cumplir el objetivo de temporada
+export const BOARD_MET_BUDGET_BONUS = 15;      // $M extra al cumplir el objetivo
 
 // ----- Mercado -----
-export const SIGNING_FEE_FACTOR = 0.5; // prima de fichaje = salario × factor
+export const SIGNING_FEE_FACTOR = 0.5;   // prima de fichaje = salario × factor
+export const BUYOUT_FACTOR = 0.6;        // cláusula = prima + años restantes × salario × factor
+export const POACH_SALARY_BUMP = 1.2;    // el robado pide más sueldo
+export const ROOKIES_PER_SEASON = 2;     // rookies procedurales que entran al pool por año
+export const FA_POOL_CAP = 10;           // tamaño máximo del pool de agentes libres
 
 // ----- UI -----
 export const TICK_SPEEDS = [

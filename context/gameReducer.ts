@@ -2,9 +2,10 @@ import { Driver, GameAction, GameState, Team } from '../types';
 import { TEAMS } from '../data/teams';
 import { DRIVERS } from '../data/drivers';
 import { CIRCUITS } from '../data/circuits';
-import { SPONSOR_PER_RACE, STAT_CAP } from '../data/constants';
+import { BOARD_START_PATIENCE, SPONSOR_PER_RACE, STAT_CAP } from '../data/constants';
 import { prizeFor } from '../engine/results';
 import { aiDevelop } from '../engine/development';
+import { carPerformance } from '../engine/performance';
 import { salaryPerRace } from '../engine/market';
 import { computeTeamStandings } from '../engine/season';
 import { SAVE_VERSION } from '../services/persistence';
@@ -14,9 +15,11 @@ const WCC_SEASON_BONUS = [40, 35, 30, 27, 24, 21, 18, 15, 12, 10];
 
 export function createNewGame(playerTeamId: string): GameState {
     const teams: Record<string, Team> = {};
-    for (const t of TEAMS) teams[t.id] = { ...t, car: { ...t.car }, driverIds: [...t.driverIds] };
+    for (const t of TEAMS) teams[t.id] = { ...t, car: { ...t.car }, driverIds: [...t.driverIds], devSpendSeason: 0 };
     const drivers: Record<string, Driver> = {};
     for (const d of DRIVERS) drivers[d.id] = { ...d };
+    const ranked = Object.values(teams).sort((a, b) => carPerformance(b.car) - carPerformance(a.car));
+    const targetPos = Math.max(1, ranked.findIndex(t => t.id === playerTeamId) + 1);
     return {
         saveVersion: SAVE_VERSION,
         playerTeamId,
@@ -27,6 +30,8 @@ export function createNewGame(playerTeamId: string): GameState {
         results: [],
         ledger: [],
         phase: 'preRace',
+        board: { targetPos, patience: BOARD_START_PATIENCE },
+        upgradeQueue: [],
     };
 }
 

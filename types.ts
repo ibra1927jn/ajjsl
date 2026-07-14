@@ -18,6 +18,7 @@ export interface Team {
     budget: number;         // $M
     sponsorTier: 1 | 2 | 3; // 1 = mejor patrocinio
     driverIds: string[];    // exactamente 2
+    devSpendSeason: number; // $M gastados en desarrollo esta temporada (cost cap)
 }
 
 export interface Driver {
@@ -120,7 +121,19 @@ export interface LedgerEntry {
 
 // ===== Estado global de partida =====
 
-export type GamePhase = 'preRace' | 'postSeason';
+export type GamePhase = 'preRace' | 'postSeason' | 'gameOver';
+
+export interface UpgradeOrder {
+    stat: CarStatKey;
+    points: number;
+    cost: number;
+    readyAtRace: number; // raceIndex en el que la mejora llega al coche
+}
+
+export interface BoardState {
+    targetPos: number; // objetivo de posición en constructores
+    patience: number;  // 0-100; a 0 la junta te despide
+}
 
 export interface GameState {
     saveVersion: number;
@@ -132,6 +145,8 @@ export interface GameState {
     results: RaceResultRecord[];
     ledger: LedgerEntry[];
     phase: GamePhase;
+    board: BoardState;
+    upgradeQueue: UpgradeOrder[]; // mejoras del jugador en fabricación
 }
 
 export type GameAction =
