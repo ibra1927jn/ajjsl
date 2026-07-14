@@ -26,6 +26,11 @@ export function computeDriverStandings(results: RaceResultRecord[]): DriverStand
             if (r.position !== null && r.position <= 3) s.podiums += 1;
             map.set(r.driverId, s);
         }
+        for (const r of race.sprintClassification ?? []) {
+            const s = map.get(r.driverId) ?? { driverId: r.driverId, teamId: r.teamId, points: 0, wins: 0, podiums: 0 };
+            s.points += r.points; // el sprint suma puntos, no victorias ni podios
+            map.set(r.driverId, s);
+        }
     }
     return [...map.values()].sort((a, b) => b.points - a.points || b.wins - a.wins);
 }
@@ -39,6 +44,11 @@ export function computeTeamStandings(results: RaceResultRecord[]): TeamStanding[
             if (r.position === 1) s.wins += 1;
             map.set(r.teamId, s);
         }
+        for (const r of race.sprintClassification ?? []) {
+            const s = map.get(r.teamId) ?? { teamId: r.teamId, points: 0, wins: 0 };
+            s.points += r.points;
+            map.set(r.teamId, s);
+        }
     }
     return [...map.values()].sort((a, b) => b.points - a.points || b.wins - a.wins);
 }
@@ -47,7 +57,7 @@ export function computeTeamStandings(results: RaceResultRecord[]): TeamStanding[
 export function pointsProgression(results: RaceResultRecord[], ids: string[], by: 'driver' | 'team') {
     const totals: Record<string, number> = Object.fromEntries(ids.map(id => [id, 0]));
     return results.map(race => {
-        for (const r of race.classification) {
+        for (const r of [...race.classification, ...(race.sprintClassification ?? [])]) {
             const key = by === 'driver' ? r.driverId : r.teamId;
             if (key in totals) totals[key] += r.points;
         }

@@ -1,4 +1,4 @@
-import { CarState, Circuit, Compound, Driver, RaceEvent, RaceState, Team } from '../types';
+import { CarState, Circuit, Compound, Driver, RaceEvent, RaceState, SessionKind, Team } from '../types';
 import {
     BASE_NOISE_SD, CLIFF_MULTIPLIER, COMPOUNDS, DIRTY_AIR_PENALTY, DIRTY_AIR_RANGE,
     FUEL_EFFECT, LAP_SCALE, PIT_LOSS, PIT_LOSS_SD, RACE_FORM_SD, SC_CHANCE_ON_DNF, SC_COMPRESS_GAP,
@@ -22,6 +22,7 @@ export const COMPOUND_NAMES: Record<Compound, string> = {
 };
 
 export interface RaceOptions {
+    kind?: SessionKind;
     lapsOverride?: number;
     playerStartCompound?: Compound;
 }
@@ -66,9 +67,10 @@ export function createRaceState(
             paceMode: 'normal' as const,
         };
     });
+    const kindLabel = opts.kind === 'sprint' ? 'Sprint' : 'Carrera';
     const startMsg = w0 >= TO_INTER_WETNESS
-        ? `🌧️ ¡Salida en mojado en ${circuit.name}! ${totalLaps} vueltas.`
-        : `Luces apagadas en ${circuit.name}. ${totalLaps} vueltas.`;
+        ? `🌧️ ¡${kindLabel} con salida en mojado en ${circuit.name}! ${totalLaps} vueltas.`
+        : `${kindLabel}: luces apagadas en ${circuit.name}. ${totalLaps} vueltas.`;
     return {
         circuitId: circuit.id,
         lap: 0,
@@ -80,6 +82,7 @@ export function createRaceState(
         fastestLap: null,
         rngState: rng.state,
         weather: { wetness },
+        kind: opts.kind ?? 'race',
     };
 }
 
@@ -98,7 +101,7 @@ function raceLapTime(
     const driver = drivers[car.driverId];
     const comp = COMPOUNDS[car.compound];
 
-    const life = compoundLife(car.compound, totalLaps, circuit);
+    const life = compoundLife(car.compound, circuit);
     const degRate = comp.degPerLap * circuit.tireStress;
     const deg = car.tireAge <= life
         ? degRate * car.tireAge

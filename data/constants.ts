@@ -96,6 +96,10 @@ export const TEAM_ORDER_CUSHION = 0.3; // s de colchón al intercambiar posicion
 export const AI_STINT_JITTER = 0.15;     // ±15% sobre el stint objetivo
 export const SC_FREE_STOP_AGE = 0.6;     // la IA para bajo SC si su neumático supera este % de vida
 
+// ----- Sprint -----
+export const SPRINT_LAP_FRACTION = 1 / 3;  // vueltas del sprint vs carrera
+export const SPRINT_POINTS_TABLE = [8, 7, 6, 5, 4, 3, 2, 1];
+
 // ----- Puntos y dinero (en $M) -----
 export const POINTS_TABLE = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
 export const FASTEST_LAP_POINT = 1;      // solo si acaba en top 10

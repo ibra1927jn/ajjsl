@@ -1,21 +1,23 @@
 import { CarState, Circuit, Compound, RaceState } from '../types';
 import {
-    COMPOUNDS, CROSSOVER_JITTER, FROM_WET_WETNESS, SC_FREE_STOP_AGE,
+    COMPOUNDS, CROSSOVER_JITTER, FROM_WET_WETNESS, LAP_SCALE, SC_FREE_STOP_AGE,
     TO_INTER_WETNESS, TO_SLICK_WETNESS, TO_WET_WETNESS,
 } from '../data/constants';
 import { isSlick } from './weather';
 import { Rng } from './rng';
 
-export function compoundLife(compound: Compound, totalLaps: number, circuit: Circuit): number {
-    return (COMPOUNDS[compound].lifeFrac * totalLaps) / circuit.tireStress;
+// La vida del neumático se basa SIEMPRE en la distancia de carrera completa
+// del circuito (no en las vueltas de la sesión: un sprint no desgasta más).
+export function compoundLife(compound: Compound, circuit: Circuit): number {
+    return (COMPOUNDS[compound].lifeFrac * Math.round(circuit.laps * LAP_SCALE)) / circuit.tireStress;
 }
 
 // Elige compuesto según agua y, en seco, el más blando que llegue al final.
-export function chooseCompound(lapsLeft: number, totalLaps: number, circuit: Circuit, wetness: number): Compound {
+export function chooseCompound(lapsLeft: number, circuit: Circuit, wetness: number): Compound {
     if (wetness >= TO_WET_WETNESS) return 'wet';
     if (wetness >= TO_INTER_WETNESS) return 'inter';
-    if (lapsLeft <= compoundLife('soft', totalLaps, circuit) * 1.1) return 'soft';
-    if (lapsLeft <= compoundLife('medium', totalLaps, circuit) * 1.1) return 'medium';
+    if (lapsLeft <= compoundLife('soft', circuit) * 1.1) return 'soft';
+    if (lapsLeft <= compoundLife('medium', circuit) * 1.1) return 'medium';
     return 'hard';
 }
 
@@ -38,27 +40,28 @@ export function aiDecidePits(state: RaceState, circuit: Circuit, playerTeamId: s
                 continue;
             }
             if (wetness <= TO_SLICK_WETNESS - jitter && lapsLeft > 2) {
-                car.pendingPit = chooseCompound(lapsLeft, state.totalLaps, circuit, 0);
+                car.pendingPit = chooseCompound(lapsLeft, circuit, 0);
                 continue;
             }
         }
         if (car.compound === 'wet' && wetness <= FROM_WET_WETNESS - jitter && lapsLeft > 2) {
             car.pendingPit = wetness <= TO_SLICK_WETNESS
-                ? chooseCompound(lapsLeft, state.totalLaps, circuit, 0)
+                ? chooseCompound(lapsLeft, circuit, 0)
                 : 'inter';
             continue;
         }
 
         // --- Desgaste (lógica de seco de la v1) ---
-        const life = compoundLife(car.compound, state.totalLaps, circuit);
-        const mustTakeMandatory = car.pitCount === 0 && lapsLeft <= 5;
+        const life = compoundLife(car.compound, circuit);
+        // En sprint no hay parada obligatoria.
+        const mustTakeMandatory = state.kind !== 'sprint' && car.pitCount === 0 && lapsLeft <= 5;
         if (lapsLeft <= 2 && !mustTakeMandatory) continue;
 
         const wornOut = car.tireAge >= life * (0.9 + rng.next() * 0.25);
         const scFreeStop = state.phase === 'safetyCar' && car.tireAge >= life * SC_FREE_STOP_AGE && car.pitCount === 0;
 
         if (wornOut || scFreeStop || mustTakeMandatory) {
-            car.pendingPit = chooseCompound(lapsLeft, state.totalLaps, circuit, wetness);
+            car.pendingPit = chooseCompound(lapsLeft, circuit, wetness);
         }
     }
 }

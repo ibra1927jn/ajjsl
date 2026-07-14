@@ -3,19 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import { useActiveGame } from '../context/GameContext';
 import { CIRCUITS } from '../data/circuits';
 import { COMPOUNDS, TICK_SPEEDS, TO_INTER_WETNESS } from '../data/constants';
-import { Circuit, Compound, Driver, RaceResultRecord, RaceState, Team } from '../types';
+import { Circuit, Compound, Driver, DriverResult, RaceResultRecord, RaceState, SessionKind, Team } from '../types';
 import { Rng } from '../engine/rng';
 import { QualiResult, simulateQualifying } from '../engine/qualifying';
-import { finalizeRace, prizeFor } from '../engine/results';
+import { finalizeRace, finalizeSprint, prizeFor } from '../engine/results';
 import { generateWeather } from '../engine/weather';
 import { scaledLaps } from '../engine/race';
+import { SPRINT_LAP_FRACTION } from '../data/constants';
 import { useRaceSim } from '../hooks/useRaceSim';
 import { TimingTower } from '../components/TimingTower';
 import { EventFeed } from '../components/EventFeed';
 import { PitControls } from '../components/PitControls';
 import { Button, Card, SectionTitle, TeamStripe, formatLapTime, money } from '../components/ui';
 
-type Step = 'quali' | 'race' | 'results';
+type Step = 'quali' | 'sprint' | 'sprintResults' | 'race' | 'results';
 
 export const RaceWeekend = () => {
     const { game, dispatch } = useActiveGame();
@@ -26,9 +27,14 @@ export const RaceWeekend = () => {
     const [seed] = useState(() => Math.floor(Math.random() * 2 ** 31));
     const [step, setStep] = useState<Step>('quali');
     const [record, setRecord] = useState<RaceResultRecord | null>(null);
+    const [sprintResult, setSprintResult] = useState<DriverResult[] | null>(null);
     const [startCompound, setStartCompound] = useState<Compound>('medium');
 
     const circuit = CIRCUITS[raceIndex];
+    const isSprint = circuit?.sprint === true;
+    // Seeds por sesión: quali=seed, sprint=seed+1, carrera=seed+2 (o seed+1 sin sprint).
+    const raceSeed = isSprint ? seed + 2 : seed + 1;
+
     const grid = useMemo(
         () => simulateQualifying(game.teams, game.drivers, circuit, new Rng(seed)),
         // la parrilla se calcula una vez con el estado al llegar al circuito
@@ -37,7 +43,7 @@ export const RaceWeekend = () => {
     );
     // Mismo seed y orden de draws que createRaceState → el pronóstico refleja la carrera real.
     const forecast = useMemo(
-        () => generateWeather(circuit, scaledLaps(circuit), new Rng(seed + 1)),
+        () => generateWeather(circuit, scaledLaps(circuit), new Rng(raceSeed)),
         // eslint-disable-next-line react-hooks/exhaustive-deps
         [seed],
     );
@@ -51,8 +57,19 @@ export const RaceWeekend = () => {
         );
     }
 
+    // La parrilla de la carrera en fin de semana sprint es el resultado del sprint.
+    const raceGrid: QualiResult[] = isSprint && sprintResult
+        ? sprintResult.map(r => ({ driverId: r.driverId, teamId: r.teamId, time: 0 }))
+        : grid;
+
+    const onSprintFinished = (raceState: RaceState) => {
+        setSprintResult(finalizeSprint(raceState));
+        setStep('sprintResults');
+    };
+
     const onRaceFinished = (raceState: RaceState) => {
         const rec = finalizeRace(raceState, raceIndex, game.season, grid[0].driverId);
+        if (sprintResult) rec.sprintClassification = sprintResult;
         setRecord(rec);
         dispatch({ type: 'RACE_COMPLETED', record: rec });
         setStep('results');
@@ -61,7 +78,10 @@ export const RaceWeekend = () => {
     return (
         <div className="animate-fade-in-up">
             <div className="mb-4">
-                <p className="text-xs text-text-sub uppercase tracking-wider font-bold">Ronda {raceIndex + 1} · {circuit.country}</p>
+                <p className="text-xs text-text-sub uppercase tracking-wider font-bold">
+                    Ronda {raceIndex + 1} · {circuit.country}
+                    {isSprint && <span className="ml-2 text-pit-yellow">· FIN DE SEMANA SPRINT</span>}
+                </p>
                 <h1 className="text-xl font-extrabold">{circuit.name}</h1>
             </div>
 
@@ -69,11 +89,22 @@ export const RaceWeekend = () => {
                 <QualiScreen grid={grid} teams={game.teams} drivers={game.drivers}
                     playerTeamId={game.playerTeamId} forecast={forecast}
                     startCompound={startCompound} onStartCompound={setStartCompound}
-                    onStart={() => setStep('race')} />
+                    startLabel={isSprint ? '🏁 Comenzar sprint' : '🏁 Comenzar carrera'}
+                    onStart={() => setStep(isSprint ? 'sprint' : 'race')} />
+            )}
+            {step === 'sprint' && (
+                <SessionRunner kind="sprint" grid={grid} circuit={circuit} teams={game.teams} drivers={game.drivers}
+                    playerTeamId={game.playerTeamId} seed={seed + 1}
+                    lapsOverride={Math.max(5, Math.round(scaledLaps(circuit) * SPRINT_LAP_FRACTION))}
+                    startCompound={startCompound} onFinished={onSprintFinished} />
+            )}
+            {step === 'sprintResults' && sprintResult && (
+                <SprintResults classification={sprintResult} teams={game.teams} drivers={game.drivers}
+                    playerTeamId={game.playerTeamId} onContinue={() => setStep('race')} />
             )}
             {step === 'race' && (
-                <RaceRunner grid={grid} circuit={circuit} teams={game.teams} drivers={game.drivers}
-                    playerTeamId={game.playerTeamId} seed={seed + 1}
+                <SessionRunner kind="race" grid={raceGrid} circuit={circuit} teams={game.teams} drivers={game.drivers}
+                    playerTeamId={game.playerTeamId} seed={raceSeed}
                     startCompound={startCompound} onFinished={onRaceFinished} />
             )}
             {step === 'results' && record && (
@@ -84,9 +115,35 @@ export const RaceWeekend = () => {
     );
 };
 
+const SprintResults = ({ classification, teams, drivers, playerTeamId, onContinue }: {
+    classification: DriverResult[];
+    teams: Record<string, Team>;
+    drivers: Record<string, Driver>;
+    playerTeamId: string;
+    onContinue: () => void;
+}) => (
+    <div className="space-y-4">
+        <SectionTitle>Resultado del sprint</SectionTitle>
+        <div className="bg-card-darker rounded-2xl border border-border-dark overflow-hidden">
+            {classification.map(r => (
+                <div key={r.driverId}
+                    className={`flex items-center gap-2 px-3 py-1.5 text-sm border-b border-border-dark/50 last:border-0 ${r.teamId === playerTeamId ? 'bg-f1-red/10' : ''} ${r.dnf ? 'opacity-40' : ''}`}>
+                    <span className="w-6 text-right font-bold tabular-nums text-text-sub">{r.position ?? '—'}</span>
+                    <TeamStripe color={teams[r.teamId].color} />
+                    <span className="flex-1 font-semibold truncate">{drivers[r.driverId].name}</span>
+                    {r.dnf ? <span className="text-danger text-xs font-semibold w-12 text-right">DNF</span>
+                        : <span className="w-12 text-right font-bold tabular-nums">{r.points > 0 ? `+${r.points}` : ''}</span>}
+                </div>
+            ))}
+        </div>
+        <p className="text-xs text-text-sub">El resultado del sprint define la parrilla de la carrera del domingo.</p>
+        <Button onClick={onContinue} className="w-full py-3">Continuar a la carrera →</Button>
+    </div>
+);
+
 const FORECAST_ICON = (w: number) => (w < 0.05 ? '☀️' : w < TO_INTER_WETNESS ? '🌦️' : '🌧️');
 
-const QualiScreen = ({ grid, teams, drivers, playerTeamId, forecast, startCompound, onStartCompound, onStart }: {
+const QualiScreen = ({ grid, teams, drivers, playerTeamId, forecast, startCompound, onStartCompound, startLabel, onStart }: {
     grid: QualiResult[];
     teams: Record<string, Team>;
     drivers: Record<string, Driver>;
@@ -94,6 +151,7 @@ const QualiScreen = ({ grid, teams, drivers, playerTeamId, forecast, startCompou
     forecast: number[];
     startCompound: Compound;
     onStartCompound: (c: Compound) => void;
+    startLabel: string;
     onStart: () => void;
 }) => {
     const q = Math.max(1, Math.floor(forecast.length / 4));
@@ -143,23 +201,25 @@ const QualiScreen = ({ grid, teams, drivers, playerTeamId, forecast, startCompou
                 </div>
             </div>
         </div>
-        <Button onClick={onStart} className="w-full py-3">🏁 Comenzar carrera</Button>
+        <Button onClick={onStart} className="w-full py-3">{startLabel}</Button>
     </div>
     );
 };
 
-const RaceRunner = ({ grid, circuit, teams, drivers, playerTeamId, seed, startCompound, onFinished }: {
+const SessionRunner = ({ kind, grid, circuit, teams, drivers, playerTeamId, seed, lapsOverride, startCompound, onFinished }: {
+    kind: SessionKind;
     grid: QualiResult[];
     circuit: Circuit;
     teams: Record<string, Team>;
     drivers: Record<string, Driver>;
     playerTeamId: string;
     seed: number;
+    lapsOverride?: number;
     startCompound: Compound;
     onFinished: (raceState: RaceState) => void;
 }) => {
     const { race, paused, setPaused, speedIdx, setSpeedIdx, queuePit, setPaceMode, requestSwap } = useRaceSim(
-        grid, circuit, teams, drivers, playerTeamId, seed, { playerStartCompound: startCompound });
+        grid, circuit, teams, drivers, playerTeamId, seed, { kind, lapsOverride, playerStartCompound: startCompound });
     const finished = race.phase === 'finished';
     const wetness = race.weather.wetness[Math.min(race.lap, race.weather.wetness.length - 1)];
 
@@ -167,6 +227,7 @@ const RaceRunner = ({ grid, circuit, teams, drivers, playerTeamId, seed, startCo
         <div className="space-y-3">
             <div className="flex items-center justify-between bg-card-dark border border-border-dark rounded-2xl px-4 py-2">
                 <span className="font-extrabold tabular-nums">
+                    {kind === 'sprint' && <span className="text-pit-yellow mr-2">SPRINT</span>}
                     Vuelta {Math.min(race.lap + (finished ? 0 : 1), race.totalLaps)}/{race.totalLaps}
                     {race.phase === 'safetyCar' && <span className="ml-2 text-pit-yellow text-xs font-bold animate-pulse">SAFETY CAR</span>}
                     {wetness >= 0.05 && (

@@ -6,9 +6,10 @@ import { GameState, RaceState } from '../types';
 import { Rng } from '../engine/rng';
 import { simulateQualifying } from '../engine/qualifying';
 import { advanceLap, createRaceState } from '../engine/race';
-import { finalizeRace } from '../engine/results';
+import { finalizeRace, finalizeSprint } from '../engine/results';
 import { compoundWetPenalty } from '../engine/weather';
-import { COMPOUNDS } from '../data/constants';
+import { COMPOUNDS, SPRINT_LAP_FRACTION } from '../data/constants';
+import { scaledLaps } from '../engine/race';
 
 const PLAYER = 'williams';
 const args = process.argv.slice(2);
@@ -105,16 +106,39 @@ function wetSeason() {
     console.log('victorias:', Object.entries(wins).sort((a, b) => b[1] - a[1]).map(([d, c]) => `${d}:${c}`).join(' '));
 }
 
+// Sprint en China: 1/3 de vueltas, puntos 8..1, sin parada obligatoria.
+function sprintCheck() {
+    const game = createNewGame(PLAYER);
+    const circuit = CIRCUITS.find(c => c.id === 'china')!;
+    const grid = simulateQualifying(game.teams, game.drivers, circuit, new Rng(7));
+    const laps = Math.max(5, Math.round(scaledLaps(circuit) * SPRINT_LAP_FRACTION));
+    let race = createRaceState(grid, circuit, PLAYER, 8, { kind: 'sprint', lapsOverride: laps });
+    let guard = 0;
+    while (race.phase !== 'finished' && guard++ < 500) {
+        race = advanceLap(race, circuit, game.teams, game.drivers, PLAYER);
+    }
+    const res = finalizeSprint(race);
+    console.log(`\n=== Sprint China (${race.totalLaps} vueltas) ===`);
+    for (const r of res.slice(0, 8)) {
+        const car = race.cars.find(c => c.driverId === r.driverId)!;
+        console.log(`P${r.position} ${r.driverId.padEnd(12)} pts=${r.points} pits=${car.pitCount}`);
+    }
+    const noPit = race.cars.filter(c => c.status === 'running' && c.pitCount === 0).length;
+    console.log(`coches sin parar (esperado ~20 en seco): ${noPit}`);
+}
+
 if (flag('detail')) {
     detail(args[args.indexOf('--detail') + 1] ?? 'monza', numArg('seed', 42));
 } else if (flag('wet-sweep')) {
     wetSweep();
     wetSeason();
-} else if (!flag('resume-check') && !flag('sprint')) {
+} else if (flag('sprint')) {
+    sprintCheck();
+} else if (!flag('resume-check')) {
     detail('monza', 42);
     detail('monaco', 42);
     baseline();
 }
 
-// Los flags --sprint y --resume-check se implementan junto a sus features.
+// El flag --resume-check se implementa junto al guardado de carrera en curso.
 export {};

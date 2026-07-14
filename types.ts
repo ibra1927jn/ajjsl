@@ -47,6 +47,7 @@ export interface Circuit {
 
 export type Compound = 'soft' | 'medium' | 'hard' | 'inter' | 'wet';
 export type PaceMode = 'attack' | 'normal' | 'conserve';
+export type SessionKind = 'race' | 'sprint';
 
 // ===== Carrera en vivo (estado efímero, no se persiste) =====
 
@@ -88,6 +89,7 @@ export interface RaceState {
     fastestLap: { driverId: string; time: number } | null;
     rngState: number;       // estado del RNG con seed para reproducibilidad
     weather: { wetness: number[] }; // timeline 0-1 por vuelta, precomputada con el seed
+    kind: SessionKind;
 }
 
 // ===== Resultados persistentes =====
@@ -107,6 +109,7 @@ export interface RaceResultRecord {
     season: number;
     classification: DriverResult[]; // ordenado: clasificados primero, luego DNFs
     polesitterId: string;
+    sprintClassification?: DriverResult[]; // solo en fines de semana sprint
 }
 
 export interface LedgerEntry {

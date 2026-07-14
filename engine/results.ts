@@ -1,5 +1,5 @@
 import { Driver, DriverResult, RaceResultRecord, RaceState, Team } from '../types';
-import { FASTEST_LAP_POINT, MANDATORY_PIT_PENALTY, POINTS_TABLE, PRIZE_OUTSIDE_TOP10, PRIZE_TABLE, WET_RACE_THRESHOLD } from '../data/constants';
+import { FASTEST_LAP_POINT, MANDATORY_PIT_PENALTY, POINTS_TABLE, PRIZE_OUTSIDE_TOP10, PRIZE_TABLE, SPRINT_POINTS_TABLE, WET_RACE_THRESHOLD } from '../data/constants';
 
 // Clasificación final: aplica penalización por no parar, reparte puntos y vuelta rápida.
 export function finalizeRace(
@@ -36,6 +36,24 @@ export function finalizeRace(
     }
 
     return { raceIndex, circuitId: state.circuitId, season, classification, polesitterId };
+}
+
+// Clasificación del sprint: puntos 8-7-...-1, sin vuelta rápida ni parada obligatoria.
+export function finalizeSprint(state: RaceState): DriverResult[] {
+    const running = [...state.cars.filter(c => c.status === 'running')].sort((a, b) => a.totalTime - b.totalTime);
+    const dnfs = state.cars.filter(c => c.status !== 'running');
+    const classification: DriverResult[] = running.map((car, i) => ({
+        driverId: car.driverId,
+        teamId: car.teamId,
+        position: i + 1,
+        points: i < SPRINT_POINTS_TABLE.length ? SPRINT_POINTS_TABLE[i] : 0,
+        fastestLap: false,
+        dnf: false,
+    }));
+    for (const car of dnfs) {
+        classification.push({ driverId: car.driverId, teamId: car.teamId, position: null, points: 0, fastestLap: false, dnf: true });
+    }
+    return classification;
 }
 
 // Premio en $M por resultado de un piloto.
