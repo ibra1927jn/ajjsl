@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 import { TEAMS } from '../data/teams';
 import { DRIVERS } from '../data/drivers';
+import { DIFFICULTY } from '../data/constants';
+import { Difficulty } from '../types';
 import { carPerformance } from '../engine/performance';
 import { clearLive } from '../services/livePersistence';
 import { Button, Card, money } from '../components/ui';
@@ -12,10 +14,11 @@ export const NewGame = () => {
     const navigate = useNavigate();
     // Modal propio: window.confirm está bloqueado en iframes con sandbox (artifacts).
     const [confirmTeamId, setConfirmTeamId] = useState<string | null>(null);
+    const [difficulty, setDifficulty] = useState<Difficulty>('normal');
 
     const startGame = (teamId: string) => {
         clearLive(); // que no quede una carrera a medias de la partida anterior
-        dispatch({ type: 'NEW_GAME', playerTeamId: teamId });
+        dispatch({ type: 'NEW_GAME', playerTeamId: teamId, difficulty });
         navigate('/dashboard');
     };
 
@@ -45,6 +48,15 @@ export const NewGame = () => {
                     <Button onClick={() => navigate('/dashboard')}>Continuar</Button>
                 </Card>
             )}
+
+            <div className="flex justify-center gap-1 mb-5 bg-card-darker rounded-xl p-1 border border-border-dark w-fit mx-auto">
+                {(Object.keys(DIFFICULTY) as Difficulty[]).map(d => (
+                    <button key={d} onClick={() => setDifficulty(d)}
+                        className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${difficulty === d ? 'bg-f1-red text-white' : 'text-text-sub hover:text-text-main'}`}>
+                        {DIFFICULTY[d].label}
+                    </button>
+                ))}
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {TEAMS.map(team => {

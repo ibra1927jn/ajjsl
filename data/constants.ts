@@ -117,6 +117,26 @@ export const AI_DEV_SPEND_FRACTION = 0.55;     // % de sus ingresos que la IA in
 export const UPGRADE_LEAD_RACES = 2;           // carreras que tarda una mejora en fabricarse
 export const DEV_COST_CAP = 60;                // $M máximos de desarrollo por temporada (todos)
 
+// ----- Dificultad -----
+export interface DifficultySpec {
+    label: string;
+    budgetMult: number;       // presupuesto inicial del jugador
+    patienceLossMult: number; // castigo de la junta
+    patienceGainMult: number; // recuperación de paciencia
+    aiDevFraction: number;    // % de ingresos que la IA invierte en desarrollo
+}
+export const DIFFICULTY: Record<import('../types').Difficulty, DifficultySpec> = {
+    easy:   { label: 'Fácil',   budgetMult: 1.3, patienceLossMult: 0.7, patienceGainMult: 1.3, aiDevFraction: 0.45 },
+    normal: { label: 'Normal',  budgetMult: 1.0, patienceLossMult: 1.0, patienceGainMult: 1.0, aiDevFraction: 0.55 },
+    hard:   { label: 'Difícil', budgetMult: 0.8, patienceLossMult: 1.3, patienceGainMult: 0.8, aiDevFraction: 0.70 },
+};
+
+// ----- Personal (staff) -----
+export const STAFF_SIGNING_FEE_FACTOR = 0.5; // prima = salario × factor
+export const STAFF_TD_DEV_DISCOUNT_MAX = 0.20;  // TD: hasta −20% coste de desarrollo
+export const STAFF_RE_QUALI_NOISE_MAX = 0.15;   // RE: hasta −15% ruido en quali
+export const STAFF_PC_PIT_DELTA_MAX = 2.0;      // PC: hasta −2.0s por parada
+
 // ----- Junta directiva -----
 export const BOARD_START_PATIENCE = 70;
 export const BOARD_TARGET_SLACK = 1;           // objetivo = rango del coche + margen

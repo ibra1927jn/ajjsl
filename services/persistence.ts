@@ -1,9 +1,10 @@
 import { GameState, Team } from '../types';
 import { carPerformance } from '../engine/performance';
 import { BOARD_START_PATIENCE, BOARD_TARGET_SLACK } from '../data/constants';
+import { initialStaffAssignment } from '../data/staff';
 import { clearLive } from './livePersistence';
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 const KEY = 'f1m_save';
 
 // Migraciones: version → función que transforma el estado de esa versión a la siguiente.
@@ -25,6 +26,23 @@ const migrations: Record<number, (old: unknown) => unknown> = {
             teams,
             board: { targetPos, patience: BOARD_START_PATIENCE },
             upgradeQueue: [],
+        };
+    },
+    // v2 → v3: dificultad, personal y palmarés (todos con defaults).
+    2: (old) => {
+        const s = old as GameState;
+        const { staff, byTeam } = initialStaffAssignment();
+        const teams: Record<string, Team> = {};
+        for (const [id, t] of Object.entries(s.teams)) {
+            teams[id] = { ...t, staffIds: t.staffIds ?? byTeam[id] ?? { td: null, re: null, pc: null } };
+        }
+        return {
+            ...s,
+            saveVersion: 3,
+            teams,
+            difficulty: s.difficulty ?? 'normal',
+            staff: s.staff ?? staff,
+            history: s.history ?? [],
         };
     },
 };

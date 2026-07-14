@@ -1,10 +1,11 @@
-import { Driver, GameAction, GameState, Team } from '../types';
+import { Difficulty, Driver, GameAction, GameState, StaffMember, Team } from '../types';
 import { TEAMS } from '../data/teams';
 import { DRIVERS } from '../data/drivers';
 import { CIRCUITS } from '../data/circuits';
+import { initialStaffAssignment } from '../data/staff';
 import {
     BOARD_GRACE_RACES, BOARD_MET_BUDGET_BONUS, BOARD_SEASON_BONUS_PATIENCE, BOARD_START_PATIENCE,
-    BOARD_TARGET_SLACK, DEV_COST_CAP,
+    BOARD_TARGET_SLACK, DEV_COST_CAP, DIFFICULTY,
     PATIENCE_GAIN_PER_RACE, PATIENCE_LOSS_CAP, PATIENCE_LOSS_PER_RACE,
     SPONSOR_PER_RACE, STAT_CAP, UPGRADE_LEAD_RACES,
 } from '../data/constants';
@@ -22,9 +23,13 @@ import { SAVE_VERSION } from '../services/persistence';
 // Bonus de presupuesto por posición final en el mundial de constructores.
 const WCC_SEASON_BONUS = [40, 35, 30, 27, 24, 21, 18, 15, 12, 10];
 
-export function createNewGame(playerTeamId: string): GameState {
+export function createNewGame(playerTeamId: string, difficulty: Difficulty = 'normal'): GameState {
+    const { staff, byTeam } = initialStaffAssignment();
     const teams: Record<string, Team> = {};
-    for (const t of TEAMS) teams[t.id] = { ...t, car: { ...t.car }, driverIds: [...t.driverIds], devSpendSeason: 0 };
+    for (const t of TEAMS) {
+        teams[t.id] = { ...t, car: { ...t.car }, driverIds: [...t.driverIds], devSpendSeason: 0, staffIds: byTeam[t.id] };
+    }
+    teams[playerTeamId].budget = Math.round(teams[playerTeamId].budget * DIFFICULTY[difficulty].budgetMult * 10) / 10;
     const drivers: Record<string, Driver> = {};
     for (const d of DRIVERS) drivers[d.id] = { ...d };
     const ranked = Object.values(teams).sort((a, b) => carPerformance(b.car) - carPerformance(a.car));
@@ -41,13 +46,16 @@ export function createNewGame(playerTeamId: string): GameState {
         phase: 'preRace',
         board: { targetPos, patience: BOARD_START_PATIENCE },
         upgradeQueue: [],
+        difficulty,
+        staff,
+        history: [],
     };
 }
 
 export function gameReducer(state: GameState | null, action: GameAction): GameState | null {
     switch (action.type) {
         case 'NEW_GAME':
-            return createNewGame(action.playerTeamId);
+            return createNewGame(action.playerTeamId, action.difficulty ?? 'normal');
 
         case 'LOAD_GAME':
             return action.state;
@@ -85,7 +93,8 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                         { raceIndex: record.raceIndex, label: `${circuit.name}: salarios`, amount: -Math.round(salaries * 10) / 10 },
                     );
                 } else {
-                    aiDevelop(team, income); // la IA también desarrolla su coche
+                    // la IA también desarrolla su coche (agresividad según dificultad)
+                    aiDevelop(team, income, DEV_COST_CAP, DIFFICULTY[state.difficulty].aiDevFraction);
                 }
             }
 
@@ -107,12 +116,13 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
             const playerWccPos = wcc.findIndex(s => s.teamId === state.playerTeamId) + 1;
             const shortfall = Math.max(0, playerWccPos - state.board.targetPos);
             const inGrace = results.length <= BOARD_GRACE_RACES;
-            const patience = Math.max(0, Math.min(100,
+            const diff = DIFFICULTY[state.difficulty];
+            const patience = Math.max(0, Math.min(100, Math.round(
                 shortfall === 0
-                    ? state.board.patience + PATIENCE_GAIN_PER_RACE
+                    ? state.board.patience + PATIENCE_GAIN_PER_RACE * diff.patienceGainMult
                     : inGrace
                         ? state.board.patience
-                        : state.board.patience - Math.min(PATIENCE_LOSS_CAP, PATIENCE_LOSS_PER_RACE * shortfall)));
+                        : state.board.patience - Math.min(PATIENCE_LOSS_CAP, PATIENCE_LOSS_PER_RACE * shortfall) * diff.patienceLossMult)));
             const fired = patience <= 0;
 
             return {

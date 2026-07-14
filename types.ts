@@ -9,6 +9,21 @@ export interface CarStats {
 
 export type CarStatKey = keyof CarStats;
 
+export type Difficulty = 'easy' | 'normal' | 'hard';
+
+// td = director técnico, re = ingeniero de carrera, pc = jefe de mecánicos
+export type StaffRole = 'td' | 're' | 'pc';
+
+export interface StaffMember {
+    id: string;
+    name: string;
+    role: StaffRole;
+    skill: number;          // 0-100
+    salary: number;         // $M por temporada
+    contractYears: number;
+    teamId: string | null;  // null = libre
+}
+
 export interface Team {
     id: string;
     name: string;
@@ -19,6 +34,7 @@ export interface Team {
     sponsorTier: 1 | 2 | 3; // 1 = mejor patrocinio
     driverIds: string[];    // exactamente 2
     devSpendSeason: number; // $M gastados en desarrollo esta temporada (cost cap)
+    staffIds: Record<StaffRole, string | null>;
 }
 
 export interface Driver {
@@ -135,6 +151,19 @@ export interface BoardState {
     patience: number;  // 0-100; a 0 la junta te despide
 }
 
+// Registro de una temporada terminada (nombres denormalizados: los pilotos
+// retirados desaparecen del estado, el palmarés debe sobrevivirlos).
+export interface SeasonRecord {
+    season: number;
+    wdc: { driverId: string; name: string; teamId: string; teamName: string; color: string };
+    wcc: { teamId: string; name: string; color: string };
+    playerPos: number;
+    playerPoints: number;
+    playerWins: number;
+    playerPodiums: number;
+    playerPoles: number;
+}
+
 export interface GameState {
     saveVersion: number;
     playerTeamId: string;
@@ -148,15 +177,19 @@ export interface GameState {
     board: BoardState;
     upgradeQueue: UpgradeOrder[]; // mejoras del jugador en fabricación
     news?: string[];              // titulares del último mercado (silly season)
+    difficulty: Difficulty;
+    staff: Record<string, StaffMember>;
+    history: SeasonRecord[];      // palmarés de temporadas terminadas
 }
 
 export type GameAction =
-    | { type: 'NEW_GAME'; playerTeamId: string }
+    | { type: 'NEW_GAME'; playerTeamId: string; difficulty?: Difficulty }
     | { type: 'LOAD_GAME'; state: GameState }
     | { type: 'RACE_COMPLETED'; record: RaceResultRecord }
     | { type: 'APPLY_UPGRADE'; stat: CarStatKey; points: number; cost: number }
     | { type: 'SWAP_DRIVER'; outDriverId: string; inDriverId: string; signingFee: number }
     | { type: 'POACH_DRIVER'; outDriverId: string; inDriverId: string; fee: number }
     | { type: 'RENEW_DRIVER'; driverId: string; fee: number }
+    | { type: 'HIRE_STAFF'; staffId: string; fee: number }
     | { type: 'ADVANCE_SEASON' }
     | { type: 'RESET' };
