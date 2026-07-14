@@ -11,6 +11,7 @@ import { Finances } from './pages/Finances';
 import { Standings } from './pages/Standings';
 import { SeasonEnd } from './pages/SeasonEnd';
 import { GameOver } from './pages/GameOver';
+import { History } from './pages/History';
 
 // Las páginas de partida solo son accesibles con una partida activa.
 // Si te han despedido, todo redirige a /game-over.
@@ -41,6 +42,7 @@ const App = () => (
                     <Route path="/finances" element={<RequireGame><Finances /></RequireGame>} />
                     <Route path="/standings" element={<RequireGame><Standings /></RequireGame>} />
                     <Route path="/season-end" element={<RequireGame><SeasonEnd /></RequireGame>} />
+                    <Route path="/history" element={<RequireGame><History /></RequireGame>} />
                     <Route path="/game-over" element={<RequireGameOver><GameOver /></RequireGameOver>} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>

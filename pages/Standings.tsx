@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useActiveGame } from '../context/GameContext';
 import { computeDriverStandings, computeTeamStandings, pointsProgression } from '../engine/season';
@@ -29,6 +30,8 @@ export const Standings = () => {
         <div className="space-y-4 animate-fade-in-up">
             <div className="flex items-center justify-between">
                 <SectionTitle>Mundial {game.season}</SectionTitle>
+                <div className="flex items-center gap-2">
+                <Link to="/history" className="text-xs text-f1-red font-semibold hover:underline">🏆 Palmarés</Link>
                 <div className="flex gap-1 bg-card-darker rounded-xl p-1 border border-border-dark">
                     {(['drivers', 'teams'] as const).map(t => (
                         <button key={t} onClick={() => setTab(t)}
@@ -36,6 +39,7 @@ export const Standings = () => {
                             {t === 'drivers' ? 'Pilotos' : 'Constructores'}
                         </button>
                     ))}
+                </div>
                 </div>
             </div>
 

@@ -17,7 +17,7 @@ import {
     freeAgents, generateRookies, poachedSalary, retireWorstFreeAgents,
     runSillySeason, salaryPerRace, signingFee, signReplacementFA,
 } from '../engine/market';
-import { computeTeamStandings } from '../engine/season';
+import { computeDriverStandings, computeTeamStandings } from '../engine/season';
 import { freeStaff, staffEffects, staffSalaryPerRace, staffSigningFee } from '../engine/staff';
 import { Rng } from '../engine/rng';
 import { SAVE_VERSION } from '../services/persistence';
@@ -390,6 +390,36 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
             const playerBonus = playerPos >= 0 && playerPos < WCC_SEASON_BONUS.length ? WCC_SEASON_BONUS[playerPos] : 10;
             const ledger = [...state.ledger, { raceIndex: 0, label: `Bonus FIA temporada ${state.season} (P${playerPos + 1} WCC)`, amount: playerBonus }];
 
+            // Palmarés: registro denormalizado de la temporada que termina
+            // (usa state.teams/state.drivers, ANTES del reset de reglamento).
+            const driverStandings = computeDriverStandings(state.results);
+            const wdcS = driverStandings[0];
+            const wccS = standings[0];
+            const playerResults = state.results.flatMap(r => r.classification.filter(c => c.teamId === state.playerTeamId));
+            const history = [...state.history];
+            if (wdcS && wccS) {
+                const wdcDriver = state.drivers[wdcS.driverId];
+                const wdcTeam = state.teams[wdcS.teamId];
+                const wccTeam = state.teams[wccS.teamId];
+                history.push({
+                    season: state.season,
+                    wdc: {
+                        driverId: wdcS.driverId,
+                        name: wdcDriver?.name ?? wdcS.driverId,
+                        teamId: wdcS.teamId,
+                        teamName: wdcTeam?.shortName ?? wdcS.teamId,
+                        color: wdcTeam?.color ?? '#8a8a99',
+                    },
+                    wcc: { teamId: wccS.teamId, name: wccTeam?.name ?? wccS.teamId, color: wccTeam?.color ?? '#8a8a99' },
+                    playerPos: playerPos + 1,
+                    playerPoints: standings[playerPos]?.points ?? 0,
+                    playerWins: playerResults.filter(r => r.position === 1).length,
+                    playerPodiums: playerResults.filter(r => r.position !== null && r.position <= 3).length,
+                    playerPoles: state.results.filter(r =>
+                        r.classification.find(c => c.driverId === r.polesitterId)?.teamId === state.playerTeamId).length,
+                });
+            }
+
             // Veredicto de la junta y nuevo objetivo según el coche de la nueva temporada.
             const metTarget = playerPos + 1 <= state.board.targetPos;
             let patience = state.board.patience;
@@ -413,6 +443,7 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                 board: { targetPos, patience },
                 news,
                 staff,
+                history,
                 ledger,
             };
         }

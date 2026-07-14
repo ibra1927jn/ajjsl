@@ -66,9 +66,9 @@ export const SeasonEnd = () => {
 
             <Button
                 className="w-full py-3"
-                onClick={() => { dispatch({ type: 'ADVANCE_SEASON' }); navigate('/dashboard'); }}
+                onClick={() => { dispatch({ type: 'ADVANCE_SEASON' }); navigate('/history'); }}
             >
-                Comenzar temporada {game.season + 1} →
+                Comenzar temporada {game.season + 1} → (verás tu palmarés)
             </Button>
         </div>
     );
