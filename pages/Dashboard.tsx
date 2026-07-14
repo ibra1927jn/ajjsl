@@ -84,6 +84,15 @@ export const Dashboard = () => {
                 <p className="text-[11px] text-text-sub mt-1">Paciencia de la junta: si llega a 0, estás despedido.</p>
             </Card>
 
+            {game.news && game.news.length > 0 && game.raceIndex === 0 && (
+                <Card>
+                    <p className="text-xs text-text-sub uppercase font-bold tracking-wider mb-2">📰 Mercado de invierno</p>
+                    <div className="space-y-1">
+                        {game.news.map((n, i) => <p key={i} className="text-xs text-text-sub">· {n}</p>)}
+                    </div>
+                </Card>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Card>
                     <SectionTitle>Tu coche</SectionTitle>

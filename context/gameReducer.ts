@@ -11,8 +11,12 @@ import {
 import { prizeFor } from '../engine/results';
 import { aiDevelop } from '../engine/development';
 import { carPerformance } from '../engine/performance';
-import { salaryPerRace } from '../engine/market';
+import {
+    freeAgents, generateRookies, poachedSalary, retireWorstFreeAgents,
+    runSillySeason, salaryPerRace, signingFee, signReplacementFA,
+} from '../engine/market';
 import { computeTeamStandings } from '../engine/season';
+import { Rng } from '../engine/rng';
 import { SAVE_VERSION } from '../services/persistence';
 
 // Bonus de presupuesto por posición final en el mundial de constructores.
@@ -182,6 +186,59 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
             };
         }
 
+        case 'POACH_DRIVER': {
+            // Comprar un piloto con contrato de otro equipo (cláusula de rescisión).
+            const player = state.teams[state.playerTeamId];
+            const inDriver = state.drivers[action.inDriverId];
+            const outDriver = state.drivers[action.outDriverId];
+            if (!inDriver || !inDriver.teamId || inDriver.teamId === state.playerTeamId) return state;
+            if (!outDriver || outDriver.teamId !== state.playerTeamId) return state;
+            if (player.budget < action.fee) return state;
+
+            const victimId = inDriver.teamId;
+            const drivers: Record<string, Driver> = {};
+            for (const [id, d] of Object.entries(state.drivers)) drivers[id] = { ...d };
+            const teams: Record<string, Team> = {};
+            for (const [id, t] of Object.entries(state.teams)) {
+                teams[id] = { ...t, car: { ...t.car }, driverIds: [...t.driverIds] };
+            }
+
+            drivers[inDriver.id] = { ...inDriver, teamId: player.id, contractYears: 2, salary: poachedSalary(inDriver) };
+            drivers[outDriver.id] = { ...outDriver, teamId: null, contractYears: 0 };
+            teams[player.id].driverIds = teams[player.id].driverIds.map(id => (id === outDriver.id ? inDriver.id : id));
+            teams[player.id].budget = Math.round((teams[player.id].budget - action.fee) * 10) / 10;
+            const victim = teams[victimId];
+            victim.driverIds = victim.driverIds.filter(id => id !== inDriver.id);
+            victim.budget = Math.round((victim.budget + action.fee) * 10) / 10;
+            signReplacementFA(victim, drivers); // la víctima repone al instante
+
+            return {
+                ...state,
+                teams,
+                drivers,
+                ledger: [...state.ledger, { raceIndex: state.raceIndex, label: `Cláusula de ${inDriver.name} (${victim.shortName})`, amount: -action.fee }],
+            };
+        }
+
+        case 'RENEW_DRIVER': {
+            const player = state.teams[state.playerTeamId];
+            const driver = state.drivers[action.driverId];
+            if (!driver || driver.teamId !== state.playerTeamId) return state;
+            if (player.budget < action.fee) return state;
+            return {
+                ...state,
+                drivers: {
+                    ...state.drivers,
+                    [driver.id]: { ...driver, contractYears: driver.contractYears + 2 },
+                },
+                teams: {
+                    ...state.teams,
+                    [player.id]: { ...player, budget: Math.round((player.budget - action.fee) * 10) / 10 },
+                },
+                ledger: [...state.ledger, { raceIndex: state.raceIndex, label: `Renovación de ${driver.name} (+2 años)`, amount: -action.fee }],
+            };
+        }
+
         case 'ADVANCE_SEASON': {
             if (state.phase !== 'postSeason') return state;
             const standings = computeTeamStandings(state.results);
@@ -198,10 +255,44 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                 player.car[order.stat] = Math.min(STAT_CAP, player.car[order.stat] + order.points);
             }
             const drivers: Record<string, Driver> = {};
-            for (const [id, d] of Object.entries(state.drivers)) {
-                // Renovación automática en v1: los contratos nunca bajan de 1 año.
-                drivers[id] = { ...d, contractYears: d.teamId ? Math.max(1, d.contractYears - 1) : 0 };
+            for (const [id, d] of Object.entries(state.drivers)) drivers[id] = { ...d };
+            const news: string[] = [];
+            const rng = new Rng(state.season);
+
+            // Los contratos expiran de verdad: a 0 años, el piloto queda libre.
+            for (const d of Object.values(drivers)) {
+                if (!d.teamId) continue;
+                d.contractYears -= 1;
+                if (d.contractYears <= 0) {
+                    const team = teams[d.teamId];
+                    team.driverIds = team.driverIds.filter(id => id !== d.id);
+                    news.push(`${d.name} queda libre al expirar su contrato con ${team.shortName}.`);
+                    d.teamId = null;
+                    d.contractYears = 0;
+                }
             }
+
+            // Nuevos rookies entran al mercado.
+            for (const rookie of generateRookies(state.season + 1, drivers, rng)) {
+                drivers[rookie.id] = rookie;
+                news.push(`${rookie.name} llega a la F1 como agente libre.`);
+            }
+
+            // Red de seguridad del jugador: nunca se queda con menos de 2 pilotos.
+            const playerTeam = teams[state.playerTeamId];
+            while (playerTeam.driverIds.length < 2) {
+                const pool = freeAgents(drivers).sort((a, b) => signingFee(a) - signingFee(b));
+                if (pool.length === 0) break;
+                const pick = pool[0];
+                drivers[pick.id] = { ...pick, teamId: playerTeam.id, contractYears: 1 };
+                playerTeam.driverIds.push(pick.id);
+                playerTeam.budget = Math.round((playerTeam.budget - signingFee(pick)) * 10) / 10;
+                news.push(`${playerTeam.shortName} ficha de urgencia a ${pick.name}.`);
+            }
+
+            // Silly season de la IA y retiradas del fondo del pool.
+            news.push(...runSillySeason(teams, drivers, state.playerTeamId, rng));
+            news.push(...retireWorstFreeAgents(drivers));
             const playerPos = standings.findIndex(s => s.teamId === state.playerTeamId);
             const playerBonus = playerPos >= 0 && playerPos < WCC_SEASON_BONUS.length ? WCC_SEASON_BONUS[playerPos] : 10;
             const ledger = [...state.ledger, { raceIndex: 0, label: `Bonus FIA temporada ${state.season} (P${playerPos + 1} WCC)`, amount: playerBonus }];
@@ -227,6 +318,7 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                 phase: 'preRace',
                 upgradeQueue: [],
                 board: { targetPos, patience },
+                news,
                 ledger,
             };
         }

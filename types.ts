@@ -147,6 +147,7 @@ export interface GameState {
     phase: GamePhase;
     board: BoardState;
     upgradeQueue: UpgradeOrder[]; // mejoras del jugador en fabricación
+    news?: string[];              // titulares del último mercado (silly season)
 }
 
 export type GameAction =
@@ -155,5 +156,7 @@ export type GameAction =
     | { type: 'RACE_COMPLETED'; record: RaceResultRecord }
     | { type: 'APPLY_UPGRADE'; stat: CarStatKey; points: number; cost: number }
     | { type: 'SWAP_DRIVER'; outDriverId: string; inDriverId: string; signingFee: number }
+    | { type: 'POACH_DRIVER'; outDriverId: string; inDriverId: string; fee: number }
+    | { type: 'RENEW_DRIVER'; driverId: string; fee: number }
     | { type: 'ADVANCE_SEASON' }
     | { type: 'RESET' };
