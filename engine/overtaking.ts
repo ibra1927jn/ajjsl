@@ -1,5 +1,8 @@
 import { CarState, Circuit, Driver, RaceEvent } from '../types';
-import { OVERTAKE_BASE, OVERTAKE_PACE_FACTOR, OVERTAKE_STUCK_GAP } from '../data/constants';
+import {
+    CONTACT_ATTACKER_LOSS, CONTACT_DEFENDER_CHANCE, CONTACT_DEFENDER_LOSS, CONTACT_PENALTY_SEC,
+    DRS_OVERTAKE_ADD, DUEL_CONTACT_CHANCE, OVERTAKE_BASE, OVERTAKE_PACE_FACTOR, OVERTAKE_STUCK_GAP,
+} from '../data/constants';
 import { Rng } from './rng';
 
 // Margen a partir del cual el paso es automático (rejoin de pits, coche roto...).
@@ -14,6 +17,7 @@ const CONTEST_MARGIN = 1.5;
 export function resolveOvertakes(
     order: CarState[],
     pittedThisLap: Set<string>,
+    drsSet: Set<string>,
     circuit: Circuit,
     drivers: Record<string, Driver>,
     lap: number,
@@ -43,10 +47,13 @@ export function resolveOvertakes(
             const attacker = drivers[behind.driverId];
             const paceDelta = Math.max(0, ahead.lastLap - behind.lastLap);
             const racecraftFactor = 0.6 + (attacker.racecraft / 100) * 0.8;
-            const p = OVERTAKE_BASE
-                * (1 - circuit.overtakingDifficulty)
-                * racecraftFactor
-                * (1 + OVERTAKE_PACE_FACTOR * Math.min(paceDelta, 2));
+            // El DRS es aditivo TRAS la compuerta: importa más donde menos se adelanta.
+            const p = Math.min(0.95,
+                OVERTAKE_BASE
+                    * (1 - circuit.overtakingDifficulty)
+                    * racecraftFactor
+                    * (1 + OVERTAKE_PACE_FACTOR * Math.min(paceDelta, 2))
+                + (drsSet.has(behind.driverId) ? DRS_OVERTAKE_ADD : 0));
 
             if (rng.chance(p)) {
                 order[i - 1] = behind;
@@ -61,6 +68,23 @@ export function resolveOvertakes(
             } else {
                 // Falla el intento: se queda pegado detrás.
                 behind.totalTime = ahead.totalTime + OVERTAKE_STUCK_GAP;
+                // Duelo que acaba mal: contacto con pérdida de tiempo y sanción al causante.
+                if (rng.chance(DUEL_CONTACT_CHANCE)) {
+                    const defender = drivers[ahead.driverId];
+                    const attackerLoss = CONTACT_ATTACKER_LOSS[0]
+                        + rng.next() * (CONTACT_ATTACKER_LOSS[1] - CONTACT_ATTACKER_LOSS[0]);
+                    behind.totalTime += attackerLoss;
+                    behind.penaltySec += CONTACT_PENALTY_SEC;
+                    if (rng.chance(CONTACT_DEFENDER_CHANCE)) {
+                        ahead.totalTime += CONTACT_DEFENDER_LOSS[0]
+                            + rng.next() * (CONTACT_DEFENDER_LOSS[1] - CONTACT_DEFENDER_LOSS[0]);
+                    }
+                    events.push({
+                        lap,
+                        type: 'incident',
+                        message: `💥 ¡Contacto entre ${attacker.shortCode} y ${defender.shortCode}! ${CONTACT_PENALTY_SEC}s de sanción para ${attacker.shortCode}.`,
+                    });
+                }
             }
         }
         if (!swapped) break;

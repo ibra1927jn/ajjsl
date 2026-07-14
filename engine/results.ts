@@ -13,10 +13,9 @@ export function finalizeRace(
 
     // La parada obligatoria no aplica en carreras mojadas.
     const wetRace = Math.max(...state.weather.wetness) > WET_RACE_THRESHOLD;
-    if (!wetRace) {
-        for (const car of running) {
-            if (car.pitCount === 0) car.totalTime += MANDATORY_PIT_PENALTY;
-        }
+    for (const car of running) {
+        if (!wetRace && car.pitCount === 0) car.totalTime += MANDATORY_PIT_PENALTY;
+        car.totalTime += car.penaltySec; // sanciones por contactos
     }
     running.sort((a, b) => a.totalTime - b.totalTime);
 
@@ -40,7 +39,9 @@ export function finalizeRace(
 
 // Clasificación del sprint: puntos 8-7-...-1, sin vuelta rápida ni parada obligatoria.
 export function finalizeSprint(state: RaceState): DriverResult[] {
-    const running = [...state.cars.filter(c => c.status === 'running')].sort((a, b) => a.totalTime - b.totalTime);
+    const running = state.cars.filter(c => c.status === 'running')
+        .map(c => ({ ...c, totalTime: c.totalTime + c.penaltySec }))
+        .sort((a, b) => a.totalTime - b.totalTime);
     const dnfs = state.cars.filter(c => c.status !== 'running');
     const classification: DriverResult[] = running.map((car, i) => ({
         driverId: car.driverId,

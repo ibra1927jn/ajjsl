@@ -69,6 +69,16 @@ export const MANDATORY_PIT_PENALTY = 10; // s añadidos en meta si no se paró
 export const QUALI_RUNS = 3;
 export const QUALI_NOISE_BASE = 0.45; // sd por run, reducido por consistencia+experiencia
 
+// ----- DRS y duelos -----
+export const DRS_RANGE = 1.0;             // s de gap para tener DRS
+export const DRS_LAP_GAIN = 0.15;         // s/vuelta que gana el coche con DRS
+export const DRS_OVERTAKE_ADD = 0.10;     // prob. extra de adelantamiento (aditiva, tras la compuerta)
+export const DUEL_CONTACT_CHANCE = 0.05;  // prob. de contacto al fallar un intento
+export const CONTACT_ATTACKER_LOSS: [number, number] = [1, 3]; // s perdidos
+export const CONTACT_DEFENDER_CHANCE = 0.4;
+export const CONTACT_DEFENDER_LOSS: [number, number] = [1, 2];
+export const CONTACT_PENALTY_SEC = 5;     // penalización del causante en meta
+
 // ----- Adelantamientos -----
 export const OVERTAKE_BASE = 0.5;        // probabilidad base de intento exitoso
 export const OVERTAKE_STUCK_GAP = 0.4;   // s a los que se queda clavado si falla

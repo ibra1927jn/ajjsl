@@ -10,7 +10,7 @@ import { rollIncidents } from './incidents';
 import { aiDecidePits, compoundLife } from './pitstop';
 import { resolveOvertakes } from './overtaking';
 import { compoundWetPenalty, dryTrackDegMult, generateWeather, wetLapPenalty } from './weather';
-import { PACE_MODES, TEAM_ORDER_CUSHION, TO_INTER_WETNESS, TO_WET_WETNESS, WET_NOISE_FACTOR } from '../data/constants';
+import { DRS_LAP_GAIN, DRS_RANGE, PACE_MODES, TEAM_ORDER_CUSHION, TO_INTER_WETNESS, TO_WET_WETNESS, WET_NOISE_FACTOR } from '../data/constants';
 import { Rng } from './rng';
 
 export function scaledLaps(circuit: Circuit): number {
@@ -65,6 +65,7 @@ export function createRaceState(
             status: 'running' as const,
             pendingPit: null,
             paceMode: 'normal' as const,
+            penaltySec: 0,
         };
     });
     const kindLabel = opts.kind === 'sprint' ? 'Sprint' : 'Carrera';
@@ -204,6 +205,15 @@ export function advanceLap(
         i === 0 ? null : c.totalTime - running[i - 1].totalTime);
     const pittedThisLap = new Set<string>();
 
+    // DRS: a menos de 1s del de delante, en verde, seco y no en la primera vuelta.
+    const drsSet = new Set<string>();
+    if (state.phase === 'green' && lap >= 2 && wetness < TO_INTER_WETNESS) {
+        running.forEach((car, i) => {
+            const gap = gapsBefore[i];
+            if (gap !== null && gap < DRS_RANGE) drsSet.add(car.driverId);
+        });
+    }
+
     running.forEach((car, i) => {
         const pitting = car.pendingPit !== null;
         let lapTime: number;
@@ -212,6 +222,7 @@ export function advanceLap(
                 + (pitting ? PIT_LOSS * 0.6 : 0); // parada "barata" bajo SC
         } else {
             lapTime = raceLapTime(car, gapsBefore[i], circuit, state.totalLaps, lap, wetness, teams, drivers, rng)
+                - (drsSet.has(car.driverId) ? DRS_LAP_GAIN : 0)
                 + (pitting ? PIT_LOSS + rng.gaussian(0, PIT_LOSS_SD) : 0);
         }
         car.totalTime += lapTime;
@@ -234,8 +245,8 @@ export function advanceLap(
         }
     });
 
-    // 4. Reordenar con compuerta de adelantamientos.
-    newEvents.push(...resolveOvertakes(running, pittedThisLap, circuit, drivers, lap, rng));
+    // 4. Reordenar con compuerta de adelantamientos (con DRS y posibles contactos).
+    newEvents.push(...resolveOvertakes(running, pittedThisLap, drsSet, circuit, drivers, lap, rng));
 
     // 5. Fin del safety car: comprimir el pelotón.
     if (state.phase === 'safetyCar') {

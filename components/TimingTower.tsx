@@ -53,7 +53,11 @@ export const TimingTower = ({ race, teams, drivers, playerTeamId }: {
                             {!dnf && <TireBadge compound={car.compound} age={car.tireAge} />}
                         </span>
                         <span className="w-10 text-right">
-                            {car.pendingPit && !dnf && <span className="text-pit-yellow text-[10px] font-bold animate-pulse">BOX</span>}
+                            {car.pendingPit && !dnf
+                                ? <span className="text-pit-yellow text-[10px] font-bold animate-pulse">BOX</span>
+                                : car.penaltySec > 0 && !dnf
+                                    ? <span className="text-danger text-[10px] font-bold">+{car.penaltySec}s</span>
+                                    : null}
                         </span>
                     </div>
                 );

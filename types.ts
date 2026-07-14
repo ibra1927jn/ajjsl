@@ -85,9 +85,10 @@ export interface CarState {
     dnfLap?: number;
     pendingPit: Compound | null; // parada encolada para la próxima vuelta
     paceMode: PaceMode;
+    penaltySec: number;          // penalizaciones acumuladas, se suman en meta
 }
 
-export type RaceEventType = 'overtake' | 'pit' | 'dnf' | 'safetyCar' | 'safetyCarEnd' | 'fastestLap' | 'info' | 'weather';
+export type RaceEventType = 'overtake' | 'pit' | 'dnf' | 'safetyCar' | 'safetyCarEnd' | 'fastestLap' | 'info' | 'weather' | 'incident' | 'radio';
 
 export interface RaceEvent {
     lap: number;
