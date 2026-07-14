@@ -12,6 +12,11 @@ Juego de mánager de Fórmula 1 en el navegador, inspirado en F1 Manager de Fron
 - **Mercado vivo**: los contratos expiran, la IA ficha en invierno, llegan rookies, se retiran veteranos, puedes renovar a tus pilotos o **pagar la cláusula** de los de otros equipos.
 - **Junta directiva**: objetivo de posición en constructores y medidor de paciencia; si llega a 0, estás **despedido** (game over).
 - **Finanzas y mundiales** con gráficas; múltiples temporadas. Guardado automático versionado en `localStorage` (los saves antiguos migran solos).
+- **Práctica libre y setup** (v3): ajusta alerones/suspensión/marchas con feedback de tus pilotos; un buen setup vale décimas todo el finde.
+- **DRS y duelos** (v3): rebufo a menos de 1s, contactos con penalizaciones de 5s, y radio de pilotos en el feed.
+- **Personal del equipo** (v3): director técnico, ingeniero de carrera y jefe de mecánicos con su propio mercado.
+- **Dificultad, palmarés y reglamentos** (v3): fácil/normal/difícil al empezar, historial de temporadas con vitrina de trofeos, y cada 3 años un reglamento nuevo sacude la parrilla.
+- **Mapa con trazados reales estilizados** (v3) para los 8 circuitos icónicos (la figura en 8 de Suzuka incluida), con línea de meta y una revolución por vuelta.
 
 ## Ejecutar en local
 
