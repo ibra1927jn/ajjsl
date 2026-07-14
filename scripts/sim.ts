@@ -127,18 +127,54 @@ function sprintCheck() {
     console.log(`coches sin parar (esperado ~20 en seco): ${noPit}`);
 }
 
+// Reanudar = correr del tirón: serializa en la vuelta N y compara el final.
+function resumeCheck() {
+    const game = createNewGame(PLAYER);
+    const circuit = CIRCUITS.find(c => c.id === 'britain')!;
+    const grid = simulateQualifying(game.teams, game.drivers, circuit, new Rng(99));
+
+    let full = createRaceState(grid, circuit, PLAYER, 100);
+    const snapshots: string[] = [];
+    while (full.phase !== 'finished') {
+        full = advanceLap(full, circuit, game.teams, game.drivers, PLAYER);
+        if (full.lap === 10) snapshots.push(JSON.stringify(full));
+    }
+
+    let resumed = JSON.parse(snapshots[0]) as ReturnType<typeof createRaceState>;
+    while (resumed.phase !== 'finished') {
+        resumed = advanceLap(resumed, circuit, game.teams, game.drivers, PLAYER);
+    }
+
+    const order = (s: typeof full) => s.cars.map(c => `${c.driverId}:${c.totalTime.toFixed(3)}:${c.status}`).join('|');
+    const same = order(full) === order(resumed);
+    console.log(`\nresume-equivalencia (serializado en vuelta 10): ${same ? 'OK ✓' : 'FALLO ✗'}`);
+    if (!same) {
+        console.log('full   :', order(full).slice(0, 200));
+        console.log('resumed:', order(resumed).slice(0, 200));
+        process.exit(1);
+    }
+    // Determinismo: mismo seed dos veces.
+    let a = createRaceState(grid, circuit, PLAYER, 100);
+    let b = createRaceState(grid, circuit, PLAYER, 100);
+    while (a.phase !== 'finished') a = advanceLap(a, circuit, game.teams, game.drivers, PLAYER);
+    while (b.phase !== 'finished') b = advanceLap(b, circuit, game.teams, game.drivers, PLAYER);
+    console.log(`determinismo (mismo seed × 2): ${order(a) === order(b) ? 'OK ✓' : 'FALLO ✗'}`);
+    if (order(a) !== order(b)) process.exit(1);
+}
+
 if (flag('detail')) {
     detail(args[args.indexOf('--detail') + 1] ?? 'monza', numArg('seed', 42));
+} else if (flag('resume-check')) {
+    resumeCheck();
 } else if (flag('wet-sweep')) {
     wetSweep();
     wetSeason();
 } else if (flag('sprint')) {
     sprintCheck();
-} else if (!flag('resume-check')) {
+} else {
     detail('monza', 42);
     detail('monaco', 42);
     baseline();
 }
 
-// El flag --resume-check se implementa junto al guardado de carrera en curso.
 export {};

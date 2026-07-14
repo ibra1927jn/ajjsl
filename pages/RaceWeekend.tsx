@@ -10,6 +10,7 @@ import { finalizeRace, finalizeSprint, prizeFor } from '../engine/results';
 import { generateWeather } from '../engine/weather';
 import { scaledLaps } from '../engine/race';
 import { SPRINT_LAP_FRACTION } from '../data/constants';
+import { clearLive, loadLive, saveLive } from '../services/livePersistence';
 import { useRaceSim } from '../hooks/useRaceSim';
 import { TimingTower } from '../components/TimingTower';
 import { EventFeed } from '../components/EventFeed';
@@ -24,11 +25,15 @@ export const RaceWeekend = () => {
 
     // Se fija al montar: tras RACE_COMPLETED el índice del juego ya apunta a la siguiente.
     const [raceIndex] = useState(game.raceIndex);
-    const [seed] = useState(() => Math.floor(Math.random() * 2 ** 31));
+    // Guardado en vivo: si hay una sesión a medias de ESTE fin de semana, se ofrece reanudar.
+    const [live] = useState(() => loadLive(game.season, game.raceIndex));
+    const [seed] = useState(() => live?.seed ?? Math.floor(Math.random() * 2 ** 31));
     const [step, setStep] = useState<Step>('quali');
     const [record, setRecord] = useState<RaceResultRecord | null>(null);
-    const [sprintResult, setSprintResult] = useState<DriverResult[] | null>(null);
-    const [startCompound, setStartCompound] = useState<Compound>('medium');
+    const [sprintResult, setSprintResult] = useState<DriverResult[] | null>(live?.sprintResult ?? null);
+    const [startCompound, setStartCompound] = useState<Compound>(live?.startCompound ?? 'medium');
+    const [resumeState, setResumeState] = useState<RaceState | null>(null);
+    const [showResume, setShowResume] = useState(live !== null);
 
     const circuit = CIRCUITS[raceIndex];
     const isSprint = circuit?.sprint === true;
@@ -63,7 +68,9 @@ export const RaceWeekend = () => {
         : grid;
 
     const onSprintFinished = (raceState: RaceState) => {
-        setSprintResult(finalizeSprint(raceState));
+        const res = finalizeSprint(raceState);
+        setSprintResult(res);
+        saveLive({ season: game.season, raceIndex, seed, step: 'sprintResults', startCompound, sprintResult: res, raceState: null });
         setStep('sprintResults');
     };
 
@@ -71,8 +78,26 @@ export const RaceWeekend = () => {
         const rec = finalizeRace(raceState, raceIndex, game.season, grid[0].driverId);
         if (sprintResult) rec.sprintClassification = sprintResult;
         setRecord(rec);
+        clearLive();
         dispatch({ type: 'RACE_COMPLETED', record: rec });
         setStep('results');
+    };
+
+    const saveLap = (liveStep: 'sprint' | 'race') => (state: RaceState) => {
+        saveLive({ season: game.season, raceIndex, seed, step: liveStep, startCompound, sprintResult, raceState: state });
+    };
+
+    const resumeNow = () => {
+        if (!live) return;
+        setResumeState(live.raceState);
+        setStep(live.step);
+        setShowResume(false);
+    };
+
+    const discardLive = () => {
+        clearLive();
+        setSprintResult(null);
+        setShowResume(false);
     };
 
     return (
@@ -85,18 +110,35 @@ export const RaceWeekend = () => {
                 <h1 className="text-xl font-extrabold">{circuit.name}</h1>
             </div>
 
+            {showResume && live && (
+                <Card className="mb-4 border-pit-yellow/50 flex items-center justify-between gap-3">
+                    <div>
+                        <p className="font-bold text-sm">Sesión a medias encontrada</p>
+                        <p className="text-xs text-text-sub">
+                            {live.raceState
+                                ? `${live.step === 'sprint' ? 'Sprint' : 'Carrera'} en la vuelta ${live.raceState.lap}/${live.raceState.totalLaps}.`
+                                : 'Sprint completado, carrera pendiente.'}
+                        </p>
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                        <Button onClick={resumeNow}>Reanudar</Button>
+                        <Button variant="ghost" onClick={discardLive}>Descartar</Button>
+                    </div>
+                </Card>
+            )}
             {step === 'quali' && (
                 <QualiScreen grid={grid} teams={game.teams} drivers={game.drivers}
                     playerTeamId={game.playerTeamId} forecast={forecast}
                     startCompound={startCompound} onStartCompound={setStartCompound}
                     startLabel={isSprint ? '🏁 Comenzar sprint' : '🏁 Comenzar carrera'}
-                    onStart={() => setStep(isSprint ? 'sprint' : 'race')} />
+                    onStart={() => { setShowResume(false); setStep(isSprint ? 'sprint' : 'race'); }} />
             )}
             {step === 'sprint' && (
                 <SessionRunner kind="sprint" grid={grid} circuit={circuit} teams={game.teams} drivers={game.drivers}
                     playerTeamId={game.playerTeamId} seed={seed + 1}
                     lapsOverride={Math.max(5, Math.round(scaledLaps(circuit) * SPRINT_LAP_FRACTION))}
-                    startCompound={startCompound} onFinished={onSprintFinished} />
+                    startCompound={startCompound} initial={resumeState} onLap={saveLap('sprint')}
+                    onFinished={onSprintFinished} />
             )}
             {step === 'sprintResults' && sprintResult && (
                 <SprintResults classification={sprintResult} teams={game.teams} drivers={game.drivers}
@@ -105,7 +147,8 @@ export const RaceWeekend = () => {
             {step === 'race' && (
                 <SessionRunner kind="race" grid={raceGrid} circuit={circuit} teams={game.teams} drivers={game.drivers}
                     playerTeamId={game.playerTeamId} seed={raceSeed}
-                    startCompound={startCompound} onFinished={onRaceFinished} />
+                    startCompound={startCompound} initial={resumeState} onLap={saveLap('race')}
+                    onFinished={onRaceFinished} />
             )}
             {step === 'results' && record && (
                 <ResultsScreen record={record} teams={game.teams} drivers={game.drivers}
@@ -206,7 +249,7 @@ const QualiScreen = ({ grid, teams, drivers, playerTeamId, forecast, startCompou
     );
 };
 
-const SessionRunner = ({ kind, grid, circuit, teams, drivers, playerTeamId, seed, lapsOverride, startCompound, onFinished }: {
+const SessionRunner = ({ kind, grid, circuit, teams, drivers, playerTeamId, seed, lapsOverride, startCompound, initial, onLap, onFinished }: {
     kind: SessionKind;
     grid: QualiResult[];
     circuit: Circuit;
@@ -216,10 +259,13 @@ const SessionRunner = ({ kind, grid, circuit, teams, drivers, playerTeamId, seed
     seed: number;
     lapsOverride?: number;
     startCompound: Compound;
+    initial?: RaceState | null;
+    onLap?: (state: RaceState) => void;
     onFinished: (raceState: RaceState) => void;
 }) => {
     const { race, paused, setPaused, speedIdx, setSpeedIdx, queuePit, setPaceMode, requestSwap } = useRaceSim(
-        grid, circuit, teams, drivers, playerTeamId, seed, { kind, lapsOverride, playerStartCompound: startCompound });
+        grid, circuit, teams, drivers, playerTeamId, seed,
+        { kind, lapsOverride, playerStartCompound: startCompound, initial, onLap });
     const finished = race.phase === 'finished';
     const wetness = race.weather.wetness[Math.min(race.lap, race.weather.wetness.length - 1)];
 
