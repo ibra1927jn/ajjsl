@@ -4,13 +4,14 @@ Juego de mánager de Fórmula 1 en el navegador, inspirado en F1 Manager de Fron
 
 ## Características
 
-- **Temporada 2025 completa**: 10 equipos y parrilla real, calendario de 24 grandes premios.
-- **Fin de semana de carrera**: clasificación simulada + carrera vuelta a vuelta con torre de tiempos en vivo, feed de eventos (adelantamientos, paradas, abandonos, safety car) y control de estrategia: tú decides cuándo paran tus coches y qué compuesto montan (blando/medio/duro).
-- **Desarrollo del coche**: invierte en aerodinámica, motor, chasis y fiabilidad. La IA también desarrolla.
-- **Mercado de pilotos**: ficha agentes libres con prima y salario.
-- **Finanzas**: premios por resultado, patrocinio por carrera, salarios y libro de movimientos.
-- **Mundiales de pilotos y constructores** con gráficas de progresión; múltiples temporadas.
-- Guardado automático en `localStorage`. (Refrescar a mitad de carrera te devuelve al inicio del fin de semana.)
+- **Temporada 2025 completa**: 10 equipos y parrilla real, calendario de 24 grandes premios con los 6 fines de semana **sprint** reales (el sprint reparte 8-7-...-1 puntos y define la parrilla del domingo).
+- **Fin de semana de carrera**: clasificación simulada + carrera vuelta a vuelta con torre de tiempos en vivo, **mapa 2D del circuito** con los coches en movimiento, feed de eventos y control total de estrategia: compuesto de salida, paradas (blando/medio/duro/intermedio/lluvia), **dial de ritmo** (atacar/normal/conservar) y **órdenes de equipo**.
+- **Clima dinámico**: puede llover a mitad de carrera, la pista se seca, los crossovers slick↔intermedio↔lluvia deciden carreras y en mojado se cometen más errores.
+- **Guardado a mitad de carrera**: si cierras el navegador en plena carrera, continúas en la misma vuelta.
+- **Desarrollo del coche**: las mejoras tardan 2 carreras en fabricarse y hay **cost cap** anual para todos; la IA también desarrolla.
+- **Mercado vivo**: los contratos expiran, la IA ficha en invierno, llegan rookies, se retiran veteranos, puedes renovar a tus pilotos o **pagar la cláusula** de los de otros equipos.
+- **Junta directiva**: objetivo de posición en constructores y medidor de paciencia; si llega a 0, estás **despedido** (game over).
+- **Finanzas y mundiales** con gráficas; múltiples temporadas. Guardado automático versionado en `localStorage` (los saves antiguos migran solos).
 
 ## Ejecutar en local
 
