@@ -7,6 +7,7 @@ import {
     BOARD_GRACE_RACES, BOARD_MET_BUDGET_BONUS, BOARD_SEASON_BONUS_PATIENCE, BOARD_START_PATIENCE,
     BOARD_TARGET_SLACK, DEV_COST_CAP, DIFFICULTY,
     PATIENCE_GAIN_PER_RACE, PATIENCE_LOSS_CAP, PATIENCE_LOSS_PER_RACE,
+    REG_BASE_SEASON, REG_KEEP, REG_SHAKE_SD, REGULATION_PERIOD,
     SPONSOR_PER_RACE, STAT_CAP, UPGRADE_LEAD_RACES,
 } from '../data/constants';
 import { prizeFor } from '../engine/results';
@@ -366,6 +367,25 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                     team.budget = Math.round((team.budget - staffSigningFee(pick)) * 10) / 10;
                 }
             }
+            // Reglamento técnico nuevo cada N temporadas: los coches se comprimen
+            // hacia la media + sacudida aleatoria → oportunidad para el medio campo.
+            // Rng dedicado para no alterar el stream del mercado.
+            const newSeason = state.season + 1;
+            const regRng = new Rng(newSeason * 7919 + 13);
+            const sinceBase = newSeason - REG_BASE_SEASON;
+            if (sinceBase > 0 && sinceBase % REGULATION_PERIOD === 0) {
+                for (const stat of ['aero', 'engine', 'chassis'] as const) {
+                    const mean = Object.values(teams).reduce((s, t) => s + t.car[stat], 0) / Object.keys(teams).length;
+                    for (const team of Object.values(teams)) {
+                        const shaken = mean * (1 - REG_KEEP) + team.car[stat] * REG_KEEP + regRng.gaussian(0, REG_SHAKE_SD);
+                        team.car[stat] = Math.max(40, Math.min(STAT_CAP, Math.round(shaken)));
+                    }
+                }
+                news.unshift(`🏛️ ¡Reglamento técnico nuevo para ${newSeason}! Los coches se rediseñan y la parrilla se sacude.`);
+            } else if ((sinceBase + 1) % REGULATION_PERIOD === 0) {
+                news.push(`🏛️ La FIA anuncia un reglamento nuevo para ${newSeason + 1}. Los equipos ya piensan en el próximo coche.`);
+            }
+
             const playerPos = standings.findIndex(s => s.teamId === state.playerTeamId);
             const playerBonus = playerPos >= 0 && playerPos < WCC_SEASON_BONUS.length ? WCC_SEASON_BONUS[playerPos] : 10;
             const ledger = [...state.ledger, { raceIndex: 0, label: `Bonus FIA temporada ${state.season} (P${playerPos + 1} WCC)`, amount: playerBonus }];

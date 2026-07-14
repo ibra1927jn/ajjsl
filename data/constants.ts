@@ -173,6 +173,12 @@ export const PATIENCE_LOSS_CAP = 9;
 export const BOARD_SEASON_BONUS_PATIENCE = 20; // al cumplir el objetivo de temporada
 export const BOARD_MET_BUDGET_BONUS = 15;      // $M extra al cumplir el objetivo
 
+// ----- Cambios de reglamento -----
+export const REGULATION_PERIOD = 3;   // cada N temporadas hay reglamento nuevo
+export const REG_BASE_SEASON = 2025;  // la primera sacudida llega en 2028
+export const REG_KEEP = 0.5;          // cuánto del coche viejo sobrevive al reset
+export const REG_SHAKE_SD = 6;        // sacudida aleatoria (puntos de stat)
+
 // ----- Mercado -----
 export const SIGNING_FEE_FACTOR = 0.5;   // prima de fichaje = salario × factor
 export const BUYOUT_FACTOR = 0.6;        // cláusula = prima + años restantes × salario × factor
