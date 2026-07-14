@@ -1,5 +1,5 @@
 import { CarStatKey, CarStats, Team } from '../types';
-import { RELIABILITY_COST_FACTOR, STAT_CAP, UPGRADE_STEP, upgradeCostPerPoint, AI_DEV_SPEND_FRACTION } from '../data/constants';
+import { DEV_COST_CAP, RELIABILITY_COST_FACTOR, STAT_CAP, UPGRADE_STEP, upgradeCostPerPoint, AI_DEV_SPEND_FRACTION } from '../data/constants';
 
 // Coste en $M de comprar `points` puntos partiendo del nivel actual.
 export function upgradeCost(stat: CarStatKey, currentLevel: number, points: number = UPGRADE_STEP): number {
@@ -20,9 +20,9 @@ function weakestStat(car: CarStats): CarStatKey {
     return keys.reduce((min, k) => (car[k] < car[min] ? k : min), keys[0]);
 }
 
-// La IA invierte parte de sus ingresos tras cada carrera en su stat más débil.
-// Muta el equipo (que debe ser una copia) y devuelve lo gastado.
-export function aiDevelop(team: Team, income: number): number {
+// La IA invierte parte de sus ingresos tras cada carrera en su stat más débil,
+// respetando el cost cap anual. Muta el equipo (copia) y devuelve lo gastado.
+export function aiDevelop(team: Team, income: number, cap: number = DEV_COST_CAP): number {
     let wallet = income * AI_DEV_SPEND_FRACTION;
     let spent = 0;
     while (true) {
@@ -30,8 +30,10 @@ export function aiDevelop(team: Team, income: number): number {
         if (team.car[stat] >= STAT_CAP) break;
         const cost = upgradeCostPerPoint(team.car[stat]) * (stat === 'reliability' ? RELIABILITY_COST_FACTOR : 1);
         if (wallet < cost || team.budget - cost < 0) break;
+        if (team.devSpendSeason + cost > cap) break;
         team.car[stat] += 1;
         team.budget -= cost;
+        team.devSpendSeason += cost;
         wallet -= cost;
         spent += cost;
     }

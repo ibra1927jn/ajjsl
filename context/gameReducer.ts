@@ -2,7 +2,7 @@ import { Driver, GameAction, GameState, Team } from '../types';
 import { TEAMS } from '../data/teams';
 import { DRIVERS } from '../data/drivers';
 import { CIRCUITS } from '../data/circuits';
-import { BOARD_START_PATIENCE, SPONSOR_PER_RACE, STAT_CAP } from '../data/constants';
+import { BOARD_START_PATIENCE, DEV_COST_CAP, SPONSOR_PER_RACE, STAT_CAP, UPGRADE_LEAD_RACES } from '../data/constants';
 import { prizeFor } from '../engine/results';
 import { aiDevelop } from '../engine/development';
 import { carPerformance } from '../engine/performance';
@@ -81,31 +81,54 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
             }
 
             const raceIndex = state.raceIndex + 1;
+
+            // Mejoras del jugador que salen de fabricación.
+            const player = teams[state.playerTeamId];
+            const ready = state.upgradeQueue.filter(o => o.readyAtRace <= raceIndex);
+            const pending = state.upgradeQueue.filter(o => o.readyAtRace > raceIndex);
+            for (const order of ready) {
+                player.car[order.stat] = Math.min(STAT_CAP, player.car[order.stat] + order.points);
+                ledger.push({ raceIndex, label: `Mejora de ${order.stat} (+${order.points}) montada en el coche`, amount: 0 });
+            }
+
             return {
                 ...state,
                 teams,
                 ledger,
                 results: [...state.results, record],
                 raceIndex,
+                upgradeQueue: pending,
                 phase: raceIndex >= CIRCUITS.length ? 'postSeason' : 'preRace',
             };
         }
 
         case 'APPLY_UPGRADE': {
+            // Encola la mejora: se cobra ya, pero tarda UPGRADE_LEAD_RACES en llegar al coche.
             const player = state.teams[state.playerTeamId];
-            if (player.budget < action.cost || player.car[action.stat] + action.points > STAT_CAP) return state;
+            const queuedPoints = state.upgradeQueue
+                .filter(o => o.stat === action.stat)
+                .reduce((s, o) => s + o.points, 0);
+            if (player.budget < action.cost) return state;
+            if (player.devSpendSeason + action.cost > DEV_COST_CAP) return state;
+            if (player.car[action.stat] + queuedPoints + action.points > STAT_CAP) return state;
             const teams = {
                 ...state.teams,
                 [player.id]: {
                     ...player,
-                    car: { ...player.car, [action.stat]: player.car[action.stat] + action.points },
                     budget: Math.round((player.budget - action.cost) * 10) / 10,
+                    devSpendSeason: Math.round((player.devSpendSeason + action.cost) * 10) / 10,
                 },
             };
             return {
                 ...state,
                 teams,
-                ledger: [...state.ledger, { raceIndex: state.raceIndex, label: `Mejora de ${action.stat} (+${action.points})`, amount: -action.cost }],
+                upgradeQueue: [...state.upgradeQueue, {
+                    stat: action.stat,
+                    points: action.points,
+                    cost: action.cost,
+                    readyAtRace: state.raceIndex + UPGRADE_LEAD_RACES,
+                }],
+                ledger: [...state.ledger, { raceIndex: state.raceIndex, label: `Fabricación: mejora de ${action.stat} (+${action.points})`, amount: -action.cost }],
             };
         }
 
@@ -145,7 +168,13 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
             for (const [id, t] of Object.entries(state.teams)) {
                 const pos = standings.findIndex(s => s.teamId === id);
                 const bonus = pos >= 0 && pos < WCC_SEASON_BONUS.length ? WCC_SEASON_BONUS[pos] : 10;
-                teams[id] = { ...t, car: { ...t.car }, driverIds: [...t.driverIds], budget: Math.round((t.budget + bonus) * 10) / 10 };
+                // El cost cap se resetea con la temporada.
+                teams[id] = { ...t, car: { ...t.car }, driverIds: [...t.driverIds], budget: Math.round((t.budget + bonus) * 10) / 10, devSpendSeason: 0 };
+            }
+            // Las mejoras aún en fabricación se montan al arrancar la nueva temporada.
+            for (const order of state.upgradeQueue) {
+                const player = teams[state.playerTeamId];
+                player.car[order.stat] = Math.min(STAT_CAP, player.car[order.stat] + order.points);
             }
             const drivers: Record<string, Driver> = {};
             for (const [id, d] of Object.entries(state.drivers)) {
@@ -162,6 +191,7 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                 teams,
                 drivers,
                 phase: 'preRace',
+                upgradeQueue: [],
                 ledger: [...state.ledger, { raceIndex: 0, label: `Bonus FIA temporada ${state.season} (P${playerPos + 1} WCC)`, amount: playerBonus }],
             };
         }
