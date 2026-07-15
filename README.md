@@ -17,6 +17,10 @@ Juego de mánager de Fórmula 1 en el navegador, inspirado en F1 Manager de Fron
 - **Personal del equipo** (v3): director técnico, ingeniero de carrera y jefe de mecánicos con su propio mercado.
 - **Dificultad, palmarés y reglamentos** (v3): fácil/normal/difícil al empezar, historial de temporadas con vitrina de trofeos, y cada 3 años un reglamento nuevo sacude la parrilla.
 - **Mapa con trazados reales estilizados** (v3) para los 8 circuitos icónicos (la figura en 8 de Suzuka incluida), con línea de meta y una revolución por vuelta.
+- **Simulación por sectores S1/S2/S3** (v4): la carrera avanza sector a sector (a 1x una vuelta dura ~6s), con tiempos de vuelta y de sector reales en la torre y velocidades 1x/2x/4x/8x.
+- **Duración de carrera configurable** (v4): corta (25%), media (50%) o completa (100% de vueltas reales).
+- **Daño de ala, VSC y banderas amarillas, y gestión de motores** (v4): los contactos rompen el ala (repara en boxes), incidentes menores traen VSC o amarilla local, y tienes 3 motores por temporada (atacar los desgasta; el 4º = sanción de parrilla).
+- **Progresión de pilotos, moral, misiones y records** (v4): los pilotos envejecen, mejoran y se retiran; la moral influye en el ritmo; misiones de patrocinador por carrera; y records de vuelta por circuito con estadísticas históricas por piloto.
 
 ## Ejecutar en local
 
