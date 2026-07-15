@@ -5,7 +5,7 @@ import { CIRCUITS } from '../data/circuits';
 import { GameState, RaceState } from '../types';
 import { Rng } from '../engine/rng';
 import { simulateQualifying } from '../engine/qualifying';
-import { advanceLap, createRaceState } from '../engine/race';
+import { advanceLap, advanceSector, createRaceState } from '../engine/race';
 import { finalizeRace, finalizeSprint } from '../engine/results';
 import { compoundWetPenalty } from '../engine/weather';
 import { COMPOUNDS, SPRINT_LAP_FRACTION } from '../data/constants';
@@ -160,6 +160,29 @@ function resumeCheck() {
     while (b.phase !== 'finished') b = advanceLap(b, circuit, game.teams, game.drivers, PLAYER);
     console.log(`determinismo (mismo seed × 2): ${order(a) === order(b) ? 'OK ✓' : 'FALLO ✗'}`);
     if (order(a) !== order(b)) process.exit(1);
+
+    // Resume a MITAD de vuelta (sector): serializa en vuelta 10 / sector 1.
+    let secFull = createRaceState(grid, circuit, PLAYER, 100);
+    let midSnap = '';
+    while (secFull.phase !== 'finished') {
+        secFull = advanceSector(secFull, circuit, game.teams, game.drivers, PLAYER);
+        if (secFull.lap === 10 && secFull.sector === 1 && !midSnap) midSnap = JSON.stringify(secFull);
+    }
+    let secResumed = JSON.parse(midSnap) as typeof secFull;
+    while (secResumed.phase !== 'finished') secResumed = advanceSector(secResumed, circuit, game.teams, game.drivers, PLAYER);
+    const secSame = order(secFull) === order(secResumed);
+    console.log(`resume a mitad de sector (V10/S1): ${secSame ? 'OK ✓' : 'FALLO ✗'}`);
+    if (!secSame) process.exit(1);
+
+    // Invariante: advanceLap === advanceSector × 3.
+    let byLap = createRaceState(grid, circuit, PLAYER, 100);
+    let bySec = createRaceState(grid, circuit, PLAYER, 100);
+    for (let k = 0; k < 15; k++) {
+        byLap = advanceLap(byLap, circuit, game.teams, game.drivers, PLAYER);
+        for (let j = 0; j < 3; j++) bySec = advanceSector(bySec, circuit, game.teams, game.drivers, PLAYER);
+    }
+    console.log(`invariante advanceLap === 3×advanceSector: ${order(byLap) === order(bySec) ? 'OK ✓' : 'FALLO ✗'}`);
+    if (order(byLap) !== order(bySec)) process.exit(1);
 }
 
 // Carrera profesional de N temporadas con el reducer completo: invariantes de

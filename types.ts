@@ -60,6 +60,7 @@ export interface Circuit {
     tireStress: number;            // multiplicador de degradación 0.8-1.3
     rainChance?: number;           // 0-1, default RAIN_CHANCE_DEFAULT
     sprint?: boolean;              // fin de semana con carrera sprint
+    sectorSplit?: [number, number, number]; // fracción de vuelta por sector (suma 1)
 }
 
 export type Compound = 'soft' | 'medium' | 'hard' | 'inter' | 'wet';
@@ -68,15 +69,19 @@ export type SessionKind = 'race' | 'sprint';
 
 // ===== Carrera en vivo (estado efímero, no se persiste) =====
 
-export type RacePhase = 'green' | 'safetyCar' | 'finished';
+export type RacePhase = 'green' | 'safetyCar' | 'vsc' | 'finished';
 export type CarStatus = 'running' | 'dnf';
+export type Sector = 0 | 1 | 2;
 
 export interface CarState {
     driverId: string;
     teamId: string;
     gridPos: number;
     totalTime: number;      // tiempo acumulado de carrera (s)
-    lastLap: number;        // último tiempo de vuelta (s)
+    lastLap: number;        // último tiempo de vuelta completado (s)
+    lapAccum: number;       // tiempo acumulado de la vuelta en curso (s)
+    lastSector: number;     // último sector completado (s)
+    bestSectors: [number, number, number]; // mejores tiempos personales por sector
     compound: Compound;
     tireAge: number;        // vueltas del juego con este juego de neumáticos
     formOffset: number;     // forma del fin de semana en s/vuelta (+ = más lento)
@@ -86,6 +91,19 @@ export interface CarState {
     pendingPit: Compound | null; // parada encolada para la próxima vuelta
     paceMode: PaceMode;
     penaltySec: number;          // penalizaciones acumuladas, se suman en meta
+}
+
+// Plan de la vuelta calculado en el sector 0 (transitorio, se reparte por sectores).
+export interface LapPlanEntry {
+    pace: number;    // tiempo total de la vuelta (s)
+    pitLoss: number; // pérdida por parada si va a boxes esta vuelta
+}
+
+// Posiciones al inicio de la vuelta, para la radio (ligero, sin snapshot completo).
+export interface LapStartInfo {
+    order: string[];               // driverIds en carrera, orden de posición
+    fastestId: string | null;
+    penalty: Record<string, number>; // driverId → penaltySec al inicio de la vuelta
 }
 
 export type RaceEventType = 'overtake' | 'pit' | 'dnf' | 'safetyCar' | 'safetyCarEnd' | 'fastestLap' | 'info' | 'weather' | 'incident' | 'radio';
@@ -99,18 +117,24 @@ export interface RaceEvent {
 export interface RaceState {
     circuitId: string;
     lap: number;            // vuelta actual completada
+    sector: Sector;         // sector a punto de correrse (de la vuelta lap+1)
     totalLaps: number;      // vueltas escaladas del juego
     cars: CarState[];       // orden = posición actual en carrera
     events: RaceEvent[];
     phase: RacePhase;
     safetyCarLapsLeft: number;
-    fastestLap: { driverId: string; time: number } | null;
+    vscLapsLeft: number;    // vueltas restantes de VSC
+    yellowSector: Sector | null; // sector con bandera amarilla local (esta vuelta)
+    fastestLap: { driverId: string; time: number } | null; // tiempo de vuelta REAL
     rngState: number;       // estado del RNG con seed para reproducibilidad
     weather: { wetness: number[] }; // timeline 0-1 por vuelta, precomputada con el seed
     kind: SessionKind;
     // Modificadores por equipo del fin de semana (setup, staff). Serializados
     // dentro del RaceState → reanudar es idéntico gratis.
     mods: Record<string, { setupLapDelta: number; pitLossDelta: number }>;
+    lapPlan: Record<string, LapPlanEntry>; // transitorio, se recalcula en cada sector 0
+    drsDrivers: string[];                  // coches con DRS, fijado en el sector 0
+    lapStart: LapStartInfo;                // posiciones al inicio de la vuelta (radio)
 }
 
 // ===== Resultados persistentes =====

@@ -100,6 +100,11 @@ export const OVERTAKE_BASE = 0.5;        // probabilidad base de intento exitoso
 export const OVERTAKE_STUCK_GAP = 0.4;   // s a los que se queda clavado si falla
 export const OVERTAKE_PACE_FACTOR = 0.35;// bonus por cada segundo de delta de ritmo
 
+// ----- Sectores -----
+export const DEFAULT_SECTOR_SPLIT: [number, number, number] = [0.34, 0.33, 0.33];
+export const SECTOR_INCIDENT_FRACTION = 1 / 3; // los incidentes se tiran cada sector a base/3
+export const SECTOR_MICRO_SD = 0.04;           // micro-ruido gaussiano por sector
+
 // ----- Incidentes -----
 export const BASE_MECH_DNF = 0.0018;     // prob. por coche y vuelta (× factor fiabilidad)
 export const BASE_DRIVER_ERROR = 0.0012; // prob. por coche y vuelta (× factor consistencia)
@@ -187,8 +192,10 @@ export const ROOKIES_PER_SEASON = 2;     // rookies procedurales que entran al p
 export const FA_POOL_CAP = 10;           // tamaño máximo del pool de agentes libres
 
 // ----- UI -----
+// Milisegundos por SECTOR (3 sectores = 1 vuelta). A 1x una vuelta dura ~6s.
 export const TICK_SPEEDS = [
-    { label: '1x', ms: 1500 },
-    { label: '2x', ms: 700 },
-    { label: '4x', ms: 300 },
+    { label: '1x', ms: 2000 },
+    { label: '2x', ms: 1000 },
+    { label: '4x', ms: 500 },
+    { label: '8x', ms: 250 },
 ];

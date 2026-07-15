@@ -1,4 +1,4 @@
-import { Circuit, Driver, RaceEvent, RaceState } from '../types';
+import { Circuit, Driver, LapStartInfo, RaceEvent, RaceState } from '../types';
 import { RADIO_TEMPLATES, RadioTrigger } from '../data/radio';
 import { COMPOUNDS } from '../data/constants';
 import { compoundLife } from './pitstop';
@@ -18,9 +18,10 @@ function pick(trigger: RadioTrigger, driverId: string, lap: number): string {
     return variants[Math.floor(rng.next() * variants.length)];
 }
 
-// Mensajes de radio de los coches del JUGADOR tras una vuelta (máx. 2, por prioridad).
+// Mensajes de radio de los coches del JUGADOR al cerrar la vuelta (máx. 1, por
+// prioridad). Compara con las posiciones de inicio de vuelta (lapStart).
 export function collectRadio(
-    before: RaceState,
+    lapStart: LapStartInfo,
     after: RaceState,
     circuit: Circuit,
     playerTeamId: string,
@@ -29,7 +30,6 @@ export function collectRadio(
     const msgs: { priority: number; event: RaceEvent }[] = [];
     const lap = after.lap;
     const runningAfter = after.cars.filter(c => c.status === 'running');
-    const runningBefore = before.cars.filter(c => c.status === 'running');
 
     const wet = after.weather.wetness;
     const wetness = wet[Math.min(lap, wet.length - 1)];
@@ -39,8 +39,8 @@ export function collectRadio(
         if (car.teamId !== playerTeamId) continue;
         const driver = drivers[car.driverId];
         const posAfter = runningAfter.indexOf(car);
-        const carBefore = runningBefore.find(c => c.driverId === car.driverId);
-        const posBefore = carBefore ? runningBefore.indexOf(carBefore) : posAfter;
+        const posBefore = lapStart.order.indexOf(car.driverId);
+        const startPenalty = lapStart.penalty[car.driverId] ?? car.penaltySec;
         const say = (trigger: RadioTrigger, priority: number) =>
             msgs.push({ priority, event: { lap, type: 'radio', message: `📻 ${driver.shortCode}: «${pick(trigger, car.driverId, lap)}»` } });
 
@@ -49,10 +49,10 @@ export function collectRadio(
         // Cliff: neumático pasado de vida y sin parada pedida.
         const life = compoundLife(car.compound, circuit);
         if (COMPOUNDS[car.compound] && car.tireAge > life * 1.05 && !car.pendingPit && lap % 3 === 0) say('tireCliff', 2);
-        if (carBefore && car.penaltySec > carBefore.penaltySec) say('contact', 1);
-        else if (posAfter < posBefore && lap % 2 === 0) say('posGain', 3);
-        else if (posAfter > posBefore && !carBefore?.pendingPit && lap % 2 === 0) say('posLoss', 3);
-        if (after.fastestLap?.driverId === car.driverId && before.fastestLap?.driverId !== car.driverId && lap > 3) say('fastestLap', 3);
+        if (car.penaltySec > startPenalty) say('contact', 1);
+        else if (posBefore >= 0 && posAfter < posBefore && lap % 2 === 0) say('posGain', 3);
+        else if (posBefore >= 0 && posAfter > posBefore && lap % 2 === 0) say('posLoss', 3);
+        if (after.fastestLap?.driverId === car.driverId && lapStart.fastestId !== car.driverId && lap > 3) say('fastestLap', 3);
     }
 
     return msgs.sort((a, b) => a.priority - b.priority).slice(0, 1).map(m => m.event);
