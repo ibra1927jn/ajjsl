@@ -5,7 +5,7 @@ import { CIRCUITS } from '../data/circuits';
 import { COMPOUNDS, TICK_SPEEDS, TO_INTER_WETNESS } from '../data/constants';
 import { Circuit, Compound, Driver, DriverResult, RaceLength, RaceResultRecord, RaceState, SessionKind, Team } from '../types';
 import { Rng } from '../engine/rng';
-import { QualiResult, simulateQualifying } from '../engine/qualifying';
+import { QualiResult, QualiSegment, simulateKnockout } from '../engine/qualifying';
 import { finalizeRace, finalizeSprint, prizeFor } from '../engine/results';
 import { generateWeather } from '../engine/weather';
 import { scaledLaps } from '../engine/race';
@@ -62,13 +62,14 @@ export const RaceWeekend = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const grid = useMemo(() => {
+    const knockout = useMemo(() => {
         const noiseMults: Record<string, number> = {};
         for (const [id, fx] of Object.entries(staffFx)) noiseMults[id] = fx.qualiNoiseMult;
-        return simulateQualifying(game.teams, game.drivers, circuit, new Rng(seed), setups ?? undefined, noiseMults);
+        return simulateKnockout(game.teams, game.drivers, circuit, new Rng(seed), setups ?? undefined, noiseMults);
         // la parrilla se calcula una vez, tras confirmar el setup
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [seed, setups]);
+    const grid = knockout.grid;
 
     const mods = useMemo(() => {
         const m: RaceState['mods'] = {};
@@ -177,7 +178,8 @@ export const RaceWeekend = () => {
                 />
             )}
             {step === 'quali' && (
-                <QualiScreen grid={grid} teams={game.teams} drivers={game.drivers}
+                <QualiScreen grid={grid} segmentOf={knockout.segmentOf} cuts={knockout.cuts}
+                    teams={game.teams} drivers={game.drivers}
                     playerTeamId={game.playerTeamId} forecast={forecast}
                     setupQuality={setups?.[game.playerTeamId] ?? SETUP_BASE_QUALITY}
                     startCompound={startCompound} onStartCompound={setStartCompound}
@@ -317,8 +319,16 @@ const PracticeScreen = ({ ideal, feedbackSeeds, reSkill, onConfirm }: {
     );
 };
 
-const QualiScreen = ({ grid, teams, drivers, playerTeamId, forecast, setupQuality, startCompound, onStartCompound, startLabel, onStart }: {
+const SEGMENT_TONE: Record<QualiSegment, string> = {
+    Q3: 'text-fastest-purple',
+    Q2: 'text-weather-blue',
+    Q1: 'text-text-dim',
+};
+
+const QualiScreen = ({ grid, segmentOf, cuts, teams, drivers, playerTeamId, forecast, setupQuality, startCompound, onStartCompound, startLabel, onStart }: {
     grid: QualiResult[];
+    segmentOf: Record<string, QualiSegment>;
+    cuts: [number, number];
     teams: Record<string, Team>;
     drivers: Record<string, Driver>;
     playerTeamId: string;
@@ -345,20 +355,34 @@ const QualiScreen = ({ grid, teams, drivers, playerTeamId, forecast, setupQualit
             </span>
         </div>
         <div className="bg-card-darker rounded-2xl border border-border-dark overflow-hidden">
-            {grid.map((q, i) => (
-                <div key={q.driverId}
-                    className={`relative flex items-center gap-2 pl-3 pr-3 py-1.5 text-sm border-b border-border-dark/40 last:border-0 ${q.teamId === playerTeamId ? 'bg-f1-red/10' : ''}`}>
-                    {q.teamId === playerTeamId && <span className="absolute left-0 top-0 bottom-0 w-0.5 bg-f1-red" />}
-                    <span className={`w-6 text-center font-display font-bold text-base tabular-nums ${i === 0 ? 'text-pit-yellow' : 'text-text-main'}`}>{i + 1}</span>
-                    <span className="w-1 h-6 rounded-full shrink-0" style={{ background: teams[q.teamId].color }} />
-                    <span className="w-11 font-display font-bold text-base tracking-wide">{drivers[q.driverId].shortCode}</span>
-                    <span className="flex-1 text-text-sub text-xs truncate">{teams[q.teamId].shortName}</span>
-                    <span className="font-display tabular-nums text-xs">{formatLapTime(q.time)}</span>
-                    <span className="w-16 text-right font-display tabular-nums text-xs text-text-sub">
-                        {i === 0 ? 'POLE' : `+${(q.time - grid[0].time).toFixed(3)}`}
-                    </span>
-                </div>
-            ))}
+            {grid.map((q, i) => {
+                const seg = segmentOf[q.driverId] ?? 'Q1';
+                const divider = i === cuts[1]
+                    ? `Eliminados en Q2 · P${cuts[1] + 1}-${cuts[0]}`
+                    : i === cuts[0]
+                        ? `Eliminados en Q1 · P${cuts[0] + 1}+`
+                        : null;
+                return (
+                    <React.Fragment key={q.driverId}>
+                        {divider && (
+                            <div className="px-3 py-1 bg-card-darker border-y border-border-dark/60">
+                                <span className="font-display text-[10px] font-bold uppercase tracking-widest text-text-dim">{divider}</span>
+                            </div>
+                        )}
+                        <div className={`relative flex items-center gap-2 pl-3 pr-3 py-1.5 text-sm border-b border-border-dark/40 last:border-0 ${q.teamId === playerTeamId ? 'bg-f1-red/10' : ''}`}>
+                            {q.teamId === playerTeamId && <span className="absolute left-0 top-0 bottom-0 w-0.5 bg-f1-red" />}
+                            <span className={`w-6 text-center font-display font-bold text-base tabular-nums ${i === 0 ? 'text-pit-yellow' : 'text-text-main'}`}>{i + 1}</span>
+                            <span className="w-1 h-6 rounded-full shrink-0" style={{ background: teams[q.teamId].color }} />
+                            <span className="w-11 font-display font-bold text-base tracking-wide">{drivers[q.driverId].shortCode}</span>
+                            <span className="flex-1 text-text-sub text-xs truncate">{teams[q.teamId].shortName}</span>
+                            <span className="font-display tabular-nums text-xs">{formatLapTime(q.time)}</span>
+                            <span className={`w-10 text-right font-display text-[10px] font-bold tracking-wide ${i === 0 ? 'text-pit-yellow' : SEGMENT_TONE[seg]}`}>
+                                {i === 0 ? 'POLE' : seg}
+                            </span>
+                        </div>
+                    </React.Fragment>
+                );
+            })}
         </div>
         <div className="bg-card-dark border border-border-dark rounded-2xl p-3 flex flex-wrap items-center gap-4">
             <div>
