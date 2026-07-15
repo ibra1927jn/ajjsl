@@ -47,7 +47,7 @@ export function collectRadio(
         if (lap === after.totalLaps - 1) say('finalLap', 4);
         if (prevWetness < 0.05 && wetness >= 0.05) say('rainStart', 1);
         // Cliff: neumático pasado de vida y sin parada pedida.
-        const life = compoundLife(car.compound, circuit);
+        const life = compoundLife(car.compound, circuit, after.raceLength);
         if (COMPOUNDS[car.compound] && car.tireAge > life * 1.05 && !car.pendingPit && lap % 3 === 0) say('tireCliff', 2);
         if (car.penaltySec > startPenalty) say('contact', 1);
         else if (posBefore >= 0 && posAfter < posBefore && lap % 2 === 0) say('posGain', 3);

@@ -6,7 +6,12 @@ import { Compound } from '../types';
 // ============================================================
 
 // ----- Escala de carrera -----
-export const LAP_SCALE = 0.5; // vueltas del juego = vueltas reales × escala
+export const LAP_SCALE = 0.5; // escala por defecto (medium) — usada como referencia
+export const RACE_LENGTH_SCALE: Record<import('../types').RaceLength, number> = {
+    short: 0.25,   // ~25% de las vueltas reales
+    medium: 0.5,   // ~50% (por defecto, como v1-v3)
+    full: 1.0,     // 100% — carrera realista completa
+};
 
 // ----- Rendimiento -----
 export const CAR_WEIGHTS = { aero: 0.4, engine: 0.35, chassis: 0.25 };

@@ -4,10 +4,16 @@ import { useGame } from '../context/GameContext';
 import { TEAMS } from '../data/teams';
 import { DRIVERS } from '../data/drivers';
 import { DIFFICULTY } from '../data/constants';
-import { Difficulty } from '../types';
+import { Difficulty, RaceLength } from '../types';
 import { carPerformance } from '../engine/performance';
 import { clearLive } from '../services/livePersistence';
 import { Button, Card, money } from '../components/ui';
+
+const RACE_LENGTHS: { key: RaceLength; label: string }[] = [
+    { key: 'short', label: 'Corta (25%)' },
+    { key: 'medium', label: 'Media (50%)' },
+    { key: 'full', label: 'Completa (100%)' },
+];
 
 export const NewGame = () => {
     const { game, dispatch } = useGame();
@@ -15,10 +21,11 @@ export const NewGame = () => {
     // Modal propio: window.confirm está bloqueado en iframes con sandbox (artifacts).
     const [confirmTeamId, setConfirmTeamId] = useState<string | null>(null);
     const [difficulty, setDifficulty] = useState<Difficulty>('normal');
+    const [raceLength, setRaceLength] = useState<RaceLength>('medium');
 
     const startGame = (teamId: string) => {
         clearLive(); // que no quede una carrera a medias de la partida anterior
-        dispatch({ type: 'NEW_GAME', playerTeamId: teamId, difficulty });
+        dispatch({ type: 'NEW_GAME', playerTeamId: teamId, difficulty, raceLength });
         navigate('/dashboard');
     };
 
@@ -49,13 +56,24 @@ export const NewGame = () => {
                 </Card>
             )}
 
-            <div className="flex justify-center gap-1 mb-5 bg-card-darker rounded-xl p-1 border border-border-dark w-fit mx-auto">
-                {(Object.keys(DIFFICULTY) as Difficulty[]).map(d => (
-                    <button key={d} onClick={() => setDifficulty(d)}
-                        className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${difficulty === d ? 'bg-f1-red text-white' : 'text-text-sub hover:text-text-main'}`}>
-                        {DIFFICULTY[d].label}
-                    </button>
-                ))}
+            <div className="flex flex-col items-center gap-2 mb-5">
+                <div className="flex gap-1 bg-card-darker rounded-xl p-1 border border-border-dark w-fit">
+                    {(Object.keys(DIFFICULTY) as Difficulty[]).map(d => (
+                        <button key={d} onClick={() => setDifficulty(d)}
+                            className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-colors ${difficulty === d ? 'bg-f1-red text-white' : 'text-text-sub hover:text-text-main'}`}>
+                            {DIFFICULTY[d].label}
+                        </button>
+                    ))}
+                </div>
+                <div className="flex gap-1 bg-card-darker rounded-xl p-1 border border-border-dark w-fit">
+                    {RACE_LENGTHS.map(l => (
+                        <button key={l.key} onClick={() => setRaceLength(l.key)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${raceLength === l.key ? 'bg-f1-red text-white' : 'text-text-sub hover:text-text-main'}`}>
+                            {l.label}
+                        </button>
+                    ))}
+                </div>
+                <p className="text-[11px] text-text-sub">Duración de carrera: {raceLength === 'full' ? 'realista (~1h a ritmo normal)' : raceLength === 'short' ? 'rápida' : 'equilibrada'}</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

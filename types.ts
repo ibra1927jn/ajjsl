@@ -138,6 +138,7 @@ export interface RaceState {
     rngState: number;       // estado del RNG con seed para reproducibilidad
     weather: { wetness: number[] }; // timeline 0-1 por vuelta, precomputada con el seed
     kind: SessionKind;
+    raceLength: RaceLength; // duración del gran premio (referencia para la vida de neumáticos)
     // Modificadores por equipo del fin de semana (setup, staff). Serializados
     // dentro del RaceState → reanudar es idéntico gratis.
     mods: Record<string, { setupLapDelta: number; pitLossDelta: number }>;

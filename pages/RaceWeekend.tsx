@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useActiveGame } from '../context/GameContext';
 import { CIRCUITS } from '../data/circuits';
 import { COMPOUNDS, TICK_SPEEDS, TO_INTER_WETNESS } from '../data/constants';
-import { Circuit, Compound, Driver, DriverResult, RaceResultRecord, RaceState, SessionKind, Team } from '../types';
+import { Circuit, Compound, Driver, DriverResult, RaceLength, RaceResultRecord, RaceState, SessionKind, Team } from '../types';
 import { Rng } from '../engine/rng';
 import { QualiResult, simulateQualifying } from '../engine/qualifying';
 import { finalizeRace, finalizeSprint, prizeFor } from '../engine/results';
@@ -83,7 +83,7 @@ export const RaceWeekend = () => {
     };
     // Mismo seed y orden de draws que createRaceState → el pronóstico refleja la carrera real.
     const forecast = useMemo(
-        () => generateWeather(circuit, scaledLaps(circuit), new Rng(raceSeed)),
+        () => generateWeather(circuit, scaledLaps(circuit, game.raceLength), new Rng(raceSeed)),
         // eslint-disable-next-line react-hooks/exhaustive-deps
         [seed],
     );
@@ -179,8 +179,8 @@ export const RaceWeekend = () => {
             )}
             {step === 'sprint' && (
                 <SessionRunner kind="sprint" grid={grid} circuit={circuit} teams={game.teams} drivers={game.drivers}
-                    playerTeamId={game.playerTeamId} seed={seed + 1} mods={mods}
-                    lapsOverride={Math.max(5, Math.round(scaledLaps(circuit) * SPRINT_LAP_FRACTION))}
+                    playerTeamId={game.playerTeamId} seed={seed + 1} mods={mods} raceLength={game.raceLength}
+                    lapsOverride={Math.max(5, Math.round(scaledLaps(circuit, game.raceLength) * SPRINT_LAP_FRACTION))}
                     startCompound={startCompound} initial={resumeState} onLap={saveLap('sprint')}
                     onFinished={onSprintFinished} />
             )}
@@ -190,7 +190,7 @@ export const RaceWeekend = () => {
             )}
             {step === 'race' && (
                 <SessionRunner kind="race" grid={raceGrid} circuit={circuit} teams={game.teams} drivers={game.drivers}
-                    playerTeamId={game.playerTeamId} seed={raceSeed} mods={mods}
+                    playerTeamId={game.playerTeamId} seed={raceSeed} mods={mods} raceLength={game.raceLength}
                     startCompound={startCompound} initial={resumeState} onLap={saveLap('race')}
                     onFinished={onRaceFinished} />
             )}
@@ -378,7 +378,7 @@ const QualiScreen = ({ grid, teams, drivers, playerTeamId, forecast, setupQualit
     );
 };
 
-const SessionRunner = ({ kind, grid, circuit, teams, drivers, playerTeamId, seed, lapsOverride, startCompound, mods, initial, onLap, onFinished }: {
+const SessionRunner = ({ kind, grid, circuit, teams, drivers, playerTeamId, seed, lapsOverride, startCompound, mods, raceLength, initial, onLap, onFinished }: {
     kind: SessionKind;
     grid: QualiResult[];
     circuit: Circuit;
@@ -389,13 +389,14 @@ const SessionRunner = ({ kind, grid, circuit, teams, drivers, playerTeamId, seed
     lapsOverride?: number;
     startCompound: Compound;
     mods: RaceState['mods'];
+    raceLength: RaceLength;
     initial?: RaceState | null;
     onLap?: (state: RaceState) => void;
     onFinished: (raceState: RaceState) => void;
 }) => {
     const { race, paused, setPaused, speedIdx, setSpeedIdx, queuePit, setPaceMode, requestSwap } = useRaceSim(
         grid, circuit, teams, drivers, playerTeamId, seed,
-        { kind, lapsOverride, playerStartCompound: startCompound, mods, initial, onLap });
+        { kind, lapsOverride, playerStartCompound: startCompound, mods, raceLength, initial, onLap });
     const finished = race.phase === 'finished';
     const wetness = race.weather.wetness[Math.min(race.lap, race.weather.wetness.length - 1)];
 

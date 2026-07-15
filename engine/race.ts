@@ -1,7 +1,7 @@
-import { CarState, Circuit, Compound, Driver, LapPlanEntry, RaceEvent, RaceState, Sector, SessionKind, Team } from '../types';
+import { CarState, Circuit, Compound, Driver, LapPlanEntry, RaceEvent, RaceLength, RaceState, Sector, SessionKind, Team } from '../types';
 import {
     BASE_NOISE_SD, CLIFF_MULTIPLIER, COMPOUNDS, DEFAULT_SECTOR_SPLIT, DIRTY_AIR_PENALTY, DIRTY_AIR_RANGE,
-    FUEL_EFFECT, LAP_SCALE, PIT_LOSS, PIT_LOSS_SD, RACE_FORM_SD, SC_CHANCE_ON_DNF, SC_COMPRESS_GAP,
+    FUEL_EFFECT, PIT_LOSS, PIT_LOSS_SD, RACE_FORM_SD, RACE_LENGTH_SCALE, SC_CHANCE_ON_DNF, SC_COMPRESS_GAP,
     SC_LAP_FACTOR, SC_MAX_LAPS, SC_MIN_LAPS, SECTOR_INCIDENT_FRACTION, SECTOR_MICRO_SD,
 } from '../data/constants';
 import { perfDelta } from './performance';
@@ -14,8 +14,8 @@ import { collectRadio } from './radio';
 import { DRS_LAP_GAIN, DRS_RANGE, PACE_MODES, TEAM_ORDER_CUSHION, TO_INTER_WETNESS, TO_WET_WETNESS, WET_NOISE_FACTOR } from '../data/constants';
 import { Rng } from './rng';
 
-export function scaledLaps(circuit: Circuit): number {
-    return Math.round(circuit.laps * LAP_SCALE);
+export function scaledLaps(circuit: Circuit, raceLength: RaceLength = 'medium'): number {
+    return Math.max(5, Math.round(circuit.laps * RACE_LENGTH_SCALE[raceLength]));
 }
 
 export const COMPOUND_NAMES: Record<Compound, string> = {
@@ -27,6 +27,7 @@ export interface RaceOptions {
     lapsOverride?: number;
     playerStartCompound?: Compound;
     mods?: RaceState['mods'];
+    raceLength?: RaceLength;
 }
 
 export function createRaceState(
@@ -37,7 +38,8 @@ export function createRaceState(
     opts: RaceOptions = {},
 ): RaceState {
     const rng = new Rng(seed);
-    const totalLaps = opts.lapsOverride ?? scaledLaps(circuit);
+    const raceLength = opts.raceLength ?? 'medium';
+    const totalLaps = opts.lapsOverride ?? scaledLaps(circuit, raceLength);
     // El clima se genera PRIMERO (orden de draws fijo para reproducibilidad).
     const wetness = generateWeather(circuit, totalLaps, rng);
     const w0 = wetness[0];
@@ -92,6 +94,7 @@ export function createRaceState(
         rngState: rng.state,
         weather: { wetness },
         kind: opts.kind ?? 'race',
+        raceLength,
         mods: opts.mods ?? {},
         lapPlan: {},
         drsDrivers: [],
@@ -106,6 +109,7 @@ function raceLapTime(
     totalLaps: number,
     lap: number,
     wetness: number,
+    raceLength: RaceLength,
     mods: RaceState['mods'],
     teams: Record<string, Team>,
     drivers: Record<string, Driver>,
@@ -115,7 +119,7 @@ function raceLapTime(
     const driver = drivers[car.driverId];
     const comp = COMPOUNDS[car.compound];
 
-    const life = compoundLife(car.compound, circuit);
+    const life = compoundLife(car.compound, circuit, raceLength);
     const degRate = comp.degPerLap * circuit.tireStress;
     const deg = car.tireAge <= life
         ? degRate * car.tireAge
@@ -232,7 +236,7 @@ export function advanceSector(
 
         const plan: Record<string, LapPlanEntry> = {};
         running.forEach((car, i) => {
-            const pace = raceLapTime(car, gaps[i], circuit, state.totalLaps, lap, wetness, state.mods, teams, drivers, rng)
+            const pace = raceLapTime(car, gaps[i], circuit, state.totalLaps, lap, wetness, state.raceLength, state.mods, teams, drivers, rng)
                 - (drs.includes(car.driverId) ? DRS_LAP_GAIN : 0);
             const pitLoss = car.pendingPit !== null
                 ? PIT_LOSS + (state.mods[car.teamId]?.pitLossDelta ?? 0) + rng.gaussian(0, PIT_LOSS_SD)
