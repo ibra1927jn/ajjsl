@@ -21,6 +21,11 @@ Juego de mánager de Fórmula 1 en el navegador, inspirado en F1 Manager de Fron
 - **Duración de carrera configurable** (v4): corta (25%), media (50%) o completa (100% de vueltas reales).
 - **Daño de ala, VSC y banderas amarillas, y gestión de motores** (v4): los contactos rompen el ala (repara en boxes), incidentes menores traen VSC o amarilla local, y tienes 3 motores por temporada (atacar los desgasta; el 4º = sanción de parrilla).
 - **Progresión de pilotos, moral, misiones y records** (v4): los pilotos envejecen, mejoran y se retiran; la moral influye en el ritmo; misiones de patrocinador por carrera; y records de vuelta por circuito con estadísticas históricas por piloto.
+- **Interfaz estilo retransmisión** (v5): fuentes e iconos embebidos (funciona 100% offline), torre de tiempos broadcast con intervalo y gap al líder, mapa del circuito con dorsales, HUD reordenado en móvil y un sistema visual coherente en todas las pantallas.
+- **Carrera como duelo estratégico** (v6): **ERS** con modos de despliegue (vuelta rápida / equilibrado / recargar / adelantar) y batería que gestionas cada vuelta; **IA rival reactiva** que ataca en la pelea, gestiona ritmo y te hace el **undercut**; e **ingeniero de estrategia** con ventana de parada, aviso de «box esta vuelta» y amenazas/oportunidades de los rivales.
+- **Fin de semana auténtico** (v6): **clasificación por eliminación Q1/Q2/Q3** con tensión de corte, y **regla de dos compuestos** en seco.
+- **Paddock vivo** (v6): **rasgos de piloto** (mago de la lluvia, cuida-ruedas, agresivo, temperamental…) que cambian su conducta en pista y clasificación; y **eventos de decisión** de junta, prensa y patrocinadores con consecuencias en presupuesto, paciencia y moral.
+- **Ingeniería de equipo** (v6): **I+D con riesgo de correlación** (las mejoras entregan puntos con varianza: pueden fallar o superar lo previsto) e **instalaciones** (túnel de viento, simulador, fábrica) que subes de nivel para reducir ese riesgo, mejorar la clasificación y acelerar las paradas y la fabricación.
 
 ## Ejecutar en local
 
