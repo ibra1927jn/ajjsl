@@ -7,6 +7,8 @@ import { ROLE_LABELS } from '../data/staff';
 import { upgradeCost } from '../engine/development';
 import { carPerformance } from '../engine/performance';
 import { freeStaff, staffEffects, staffSigningFee } from '../engine/staff';
+import { Facilities } from '../types';
+import { FACILITY_COST, FACILITY_MAX, UPGRADE_VARIANCE_BASE, WIND_TUNNEL_VARIANCE_CUT } from '../data/constants';
 import { Badge, Button, Card, SectionTitle, StatBar, money } from '../components/ui';
 import { IconAir, IconEngine, IconChassis, IconShield } from '../components/icons';
 
@@ -20,7 +22,7 @@ const STATS: { key: CarStatKey; label: string; desc: string; Icon: React.FC<{ si
 export const Development = () => {
     const { game, dispatch } = useActiveGame();
     const player = game.teams[game.playerTeamId];
-    const [tab, setTab] = useState<'car' | 'staff'>('car');
+    const [tab, setTab] = useState<DevTab>('car');
     const fx = staffEffects(player, game.staff);
 
     if (tab === 'staff') {
@@ -28,6 +30,15 @@ export const Development = () => {
             <div className="space-y-4 animate-fade-in-up">
                 <DevTabs tab={tab} setTab={setTab} />
                 <StaffPanel />
+            </div>
+        );
+    }
+
+    if (tab === 'facilities') {
+        return (
+            <div className="space-y-4 animate-fade-in-up">
+                <DevTabs tab={tab} setTab={setTab} />
+                <FacilitiesPanel />
             </div>
         );
     }
@@ -42,6 +53,15 @@ export const Development = () => {
                     {fx.devDiscount > 0 && <span className="text-gap-green"> · −{Math.round(fx.devDiscount * 100)}% coste (TD)</span>}
                 </span>
             </div>
+            {(() => {
+                const variance = Math.max(0, UPGRADE_VARIANCE_BASE - WIND_TUNNEL_VARIANCE_CUT * (player.facilities.windTunnel - 1));
+                return (
+                    <p className="text-xs text-text-sub">
+                        Riesgo de correlación actual: <span className={variance > 0.2 ? 'text-danger font-semibold' : variance > 0.1 ? 'text-pit-yellow font-semibold' : 'text-gap-green font-semibold'}>±{Math.round(variance * 100)}%</span>
+                        {' '}sobre lo previsto — sube el túnel de viento (Instalaciones) para reducirlo.
+                    </p>
+                );
+            })()}
 
             <Card>
                 <div className="flex items-center justify-between mb-1">
@@ -61,7 +81,8 @@ export const Development = () => {
                         <p className="text-xs font-bold text-text-sub uppercase tracking-wider">En fabricación</p>
                         {game.upgradeQueue.map((o, i) => (
                             <p key={i} className="text-xs text-text-sub">
-                                ⚙️ {o.stat} +{o.points} · lista para{' '}
+                                ⚙️ {o.stat} ~+{o.predicted}
+                                {o.variance > 0 && <span className="text-pit-yellow"> ±{Math.round(o.variance * 100)}%</span>} · lista para{' '}
                                 <span className="text-text-main font-semibold">
                                     {CIRCUITS[Math.min(o.readyAtRace, CIRCUITS.length - 1)].name}
                                 </span>
@@ -113,16 +134,63 @@ export const Development = () => {
     );
 };
 
-const DevTabs = ({ tab, setTab }: { tab: 'car' | 'staff'; setTab: (t: 'car' | 'staff') => void }) => (
+type DevTab = 'car' | 'staff' | 'facilities';
+const DEV_TAB_LABEL: Record<DevTab, string> = { car: 'Coche', staff: 'Personal', facilities: 'Instalaciones' };
+const DevTabs = ({ tab, setTab }: { tab: DevTab; setTab: (t: DevTab) => void }) => (
     <div className="flex gap-1 bg-card-darker rounded-xl p-1 border border-border-dark w-fit">
-        {(['car', 'staff'] as const).map(t => (
+        {(['car', 'staff', 'facilities'] as const).map(t => (
             <button key={t} onClick={() => setTab(t)}
                 className={`px-4 py-1.5 rounded-lg text-sm font-bold ${tab === t ? 'bg-f1-red text-white' : 'text-text-sub hover:text-text-main'}`}>
-                {t === 'car' ? 'Coche' : 'Personal'}
+                {DEV_TAB_LABEL[t]}
             </button>
         ))}
     </div>
 );
+
+const FACILITY_META: { key: keyof Facilities; label: string; desc: string }[] = [
+    { key: 'windTunnel', label: 'Túnel de viento', desc: 'Mejoras más fiables: reduce la varianza de correlación del desarrollo.' },
+    { key: 'simulator', label: 'Simulador', desc: 'Menos ruido en clasificación y mejor lectura del setup.' },
+    { key: 'factory', label: 'Fábrica', desc: 'Paradas más rápidas; a nivel 5, una carrera menos de fabricación.' },
+];
+
+const FacilitiesPanel = () => {
+    const { game, dispatch } = useActiveGame();
+    const player = game.teams[game.playerTeamId];
+    return (
+        <div className="space-y-4">
+            <SectionTitle eyebrow="Infraestructura">Instalaciones</SectionTitle>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {FACILITY_META.map(({ key, label, desc }) => {
+                    const level = player.facilities[key];
+                    const maxed = level >= FACILITY_MAX;
+                    const cost = maxed ? 0 : FACILITY_COST[level];
+                    const affordable = player.budget >= cost;
+                    return (
+                        <Card key={key} accent={player.color}>
+                            <p className="font-bold text-sm mb-1">{label}</p>
+                            <div className="flex items-center gap-1 mb-2">
+                                {Array.from({ length: FACILITY_MAX }).map((_, i) => (
+                                    <span key={i} className={`h-2 flex-1 rounded-full ${i < level ? 'bg-gap-green' : 'bg-card-darker'}`} />
+                                ))}
+                            </div>
+                            <p className="font-display text-lg font-bold tabular-nums leading-none">Nivel {level}<span className="text-text-dim text-sm">/{FACILITY_MAX}</span></p>
+                            <p className="text-[11px] text-text-sub mt-2 mb-3">{desc}</p>
+                            <Button size="sm" className="w-full justify-center"
+                                disabled={maxed || !affordable}
+                                onClick={() => dispatch({ type: 'UPGRADE_FACILITY', facility: key, cost })}>
+                                {maxed ? 'Al máximo' : `Subir nivel · ${money(cost)}`}
+                            </Button>
+                        </Card>
+                    );
+                })}
+            </div>
+            <p className="text-xs text-text-sub">
+                Las instalaciones se pagan con presupuesto (no cuentan para el cost cap de desarrollo) y se conservan
+                entre temporadas. Un buen túnel de viento hace que tus mejoras entreguen lo previsto en vez de fallar.
+            </p>
+        </div>
+    );
+};
 
 const ROLE_DESC: Record<StaffRole, string> = {
     td: 'Abarata el desarrollo del coche (hasta −20%).',
