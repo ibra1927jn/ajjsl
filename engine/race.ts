@@ -16,8 +16,20 @@ import { moraleLapDelta } from './morale';
 import { collectRadio } from './radio';
 import { DRS_LAP_GAIN, DRS_RANGE, PACE_MODES, TEAM_ORDER_CUSHION, TO_INTER_WETNESS, TO_WET_WETNESS, WET_NOISE_FACTOR } from '../data/constants';
 import { ERS_ATTACK_GAP, ERS_LOW_CHARGE, ERS_MIN_DEPLOY, ERS_MODES } from '../data/constants';
-import { ErsMode } from '../types';
+import { AI_CHASE_GAP, AI_CLEAN_AIR_GAP, AI_CONSERVE_LIFE, AI_THREAT_GAP } from '../data/constants';
+import { ErsMode, PaceMode } from '../types';
 import { Rng } from './rng';
+
+// Ritmo reactivo de un coche IA (puro, sin rng): ataca en pelea rueda a rueda,
+// conserva neumático en aire limpio, normal en el resto.
+function aiPaceMode(gapAhead: number | null, gapBehind: number | null, tireAge: number, life: number): PaceMode {
+    if (gapBehind !== null && gapBehind < AI_THREAT_GAP) return 'attack';   // defiende
+    if (gapAhead !== null && gapAhead < AI_CHASE_GAP) return 'attack';      // caza
+    const cleanAir = (gapAhead === null || gapAhead > AI_CLEAN_AIR_GAP)
+        && (gapBehind === null || gapBehind > AI_CLEAN_AIR_GAP);
+    if (cleanAir && tireAge > life * AI_CONSERVE_LIFE) return 'conserve';   // cuida el neumático
+    return 'normal';
+}
 
 // Política ERS de un coche IA según su situación en pista (pura, sin rng).
 // El jugador conserva su propio ersMode (lo fija la UI).
@@ -271,7 +283,11 @@ export function advanceSector(
         running.forEach((car, i) => {
             const gapAhead = gaps[i];
             const gapBehind = i + 1 < running.length ? running[i + 1].totalTime - car.totalTime : null;
-            if (car.teamId !== playerTeamId) car.ersMode = aiErsMode(car.ers, gapAhead, gapBehind);
+            if (car.teamId !== playerTeamId) {
+                // La IA reacciona: ritmo y ERS según su situación en pista (puro).
+                car.paceMode = aiPaceMode(gapAhead, gapBehind, car.tireAge, compoundLife(car.compound, circuit, state.raceLength));
+                car.ersMode = aiErsMode(car.ers, gapAhead, gapBehind);
+            }
             const canDeploy = car.ers >= ERS_MIN_DEPLOY;
             ersDeltas[car.driverId] = state.phase === 'green' ? ersLapDelta(car.ersMode, car.ers) : 0;
             if (state.phase === 'green' && car.ersMode === 'overtake' && canDeploy) ers.push(car.driverId);

@@ -2,6 +2,7 @@ import { CarState, Circuit, Compound, RaceLength, RaceState } from '../types';
 import {
     COMPOUNDS, CROSSOVER_JITTER, FROM_WET_WETNESS, RACE_LENGTH_SCALE, SC_FREE_STOP_AGE,
     TO_INTER_WETNESS, TO_SLICK_WETNESS, TO_WET_WETNESS,
+    UNDERCUT_AGE_OFFSET, UNDERCUT_CHANCE, UNDERCUT_GAP, UNDERCUT_LIFE_FRAC,
 } from '../data/constants';
 import { isSlick } from './weather';
 import { Rng } from './rng';
@@ -25,9 +26,30 @@ export function chooseCompound(lapsLeft: number, circuit: Circuit, wetness: numb
 // Decide las paradas de los coches IA (los del jugador solo paran por orden explícita).
 export function aiDecidePits(state: RaceState, circuit: Circuit, playerTeamId: string, wetness: number, rng: Rng): void {
     const lapsLeft = state.totalLaps - state.lap;
+    // Rng dedicado para el undercut: no perturba el flujo principal de incidentes.
+    const und = new Rng((state.rngState ^ ((state.lap + 1) * 2654435761)) >>> 0);
+    const running = state.cars.filter(c => c.status === 'running');
+    const isSlickDry = wetness < TO_INTER_WETNESS;
 
     for (const car of state.cars) {
         if (car.status !== 'running' || car.teamId === playerTeamId || car.pendingPit) continue;
+
+        // --- Undercut / overcut reactivo (solo en seco, coche en ventana de parada) ---
+        // Reacciona a un rival cercano que va a parar o que rueda con neumático más
+        // viejo → parar ahora para saltarle con gomas frescas.
+        const life0 = compoundLife(car.compound, circuit, state.raceLength);
+        if (isSlickDry && state.phase === 'green' && lapsLeft > 4 && car.tireAge >= life0 * UNDERCUT_LIFE_FRAC) {
+            const idx = running.indexOf(car);
+            const neighbours = [running[idx - 1], running[idx + 1]].filter(Boolean) as CarState[];
+            const rival = neighbours.find(r =>
+                r.teamId !== car.teamId
+                && Math.abs(r.totalTime - car.totalTime) < UNDERCUT_GAP
+                && (r.pendingPit !== null || r.tireAge >= car.tireAge + UNDERCUT_AGE_OFFSET));
+            if (rival && und.chance(UNDERCUT_CHANCE)) {
+                car.pendingPit = chooseCompound(lapsLeft, circuit, wetness, state.raceLength);
+                continue;
+            }
+        }
 
         // --- Crossovers de clima (con histéresis + jitter por coche) ---
         const jitter = rng.next() * CROSSOVER_JITTER;

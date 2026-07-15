@@ -158,6 +158,16 @@ export const ERS_OVERTAKE_ADD = 0.08; // prob. extra de adelantamiento (aditiva,
 // ----- Estrategia IA -----
 export const AI_STINT_JITTER = 0.15;     // ±15% sobre el stint objetivo
 export const SC_FREE_STOP_AGE = 0.6;     // la IA para bajo SC si su neumático supera este % de vida
+// Ritmo reactivo de la IA (puro, sin rng): ataca en pelea, conserva en aire limpio.
+export const AI_THREAT_GAP = 0.9;        // le aprietan por detrás dentro de este gap → defiende (attack)
+export const AI_CHASE_GAP = 1.3;         // caza al de delante dentro de este gap → attack
+export const AI_CLEAN_AIR_GAP = 2.5;     // sin nadie cerca → puede conservar
+export const AI_CONSERVE_LIFE = 0.6;     // conserva solo si el neumático supera este % de vida
+// Undercut/overcut de la IA (aleatoriedad en Rng dedicado, no toca el flujo principal).
+export const UNDERCUT_GAP = 2.5;         // reacciona a rivales dentro de este gap
+export const UNDERCUT_AGE_OFFSET = 4;    // rival con neumático así de más viejo → oportunidad de overcut
+export const UNDERCUT_LIFE_FRAC = 0.7;   // solo si el propio neumático supera este % de vida
+export const UNDERCUT_CHANCE = 0.5;      // prob. de morder el anzuelo cuando se dan las condiciones
 
 // ----- Sprint -----
 export const SPRINT_LAP_FRACTION = 1 / 3;  // vueltas del sprint vs carrera
