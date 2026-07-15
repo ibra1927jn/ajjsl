@@ -87,8 +87,10 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                         <span className="font-display font-bold text-lg tracking-wide hidden sm:inline">MANAGER</span>
                     </Link>
                     <div className="flex items-center gap-2.5">
-                        <div className="text-right leading-tight hidden sm:block">
-                            <p className="text-[10px] uppercase tracking-widest text-text-dim">{game.season} · R{Math.min(game.raceIndex + 1, CIRCUITS.length)}/{CIRCUITS.length}</p>
+                        <div className="text-right leading-tight">
+                            <p className="text-[10px] uppercase tracking-widest text-text-sub">
+                                <span className="hidden sm:inline">{game.season} · </span>R{Math.min(game.raceIndex + 1, CIRCUITS.length)}/{CIRCUITS.length}
+                            </p>
                         </div>
                         <div className="flex items-center gap-1.5 rounded-lg bg-card-dark border border-border-dark px-2 py-1">
                             <span className="w-1.5 h-4 rounded-full" style={{ background: player.color }} />

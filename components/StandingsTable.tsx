@@ -1,4 +1,5 @@
 import React from 'react';
+import { IconTrophy } from './icons';
 
 export interface StandingRow {
     id: string;
@@ -22,7 +23,7 @@ export const StandingsTable = ({ rows }: { rows: StandingRow[] }) => (
                 <span className="w-1 h-6 rounded-full shrink-0" style={{ background: row.color }} />
                 <span className="flex-1 font-semibold truncate">{row.name}</span>
                 {row.sub && <span className="text-xs text-text-sub hidden sm:block">{row.sub}</span>}
-                {row.wins > 0 && <span className="inline-flex items-center gap-0.5 text-xs text-pit-yellow tabular-nums font-semibold">🏆 {row.wins}</span>}
+                {row.wins > 0 && <span className="inline-flex items-center gap-1 text-xs text-pit-yellow tabular-nums font-semibold"><IconTrophy size={13} /> {row.wins}</span>}
                 <span className="w-12 text-right font-display font-bold text-lg tabular-nums">{row.points}</span>
             </div>
         ))}
