@@ -199,7 +199,10 @@ export const RELIABILITY_COST_FACTOR = 0.6;    // fiabilidad más barata
 export const STAT_CAP = 99;
 export const AI_DEV_SPEND_FRACTION = 0.55;     // % de sus ingresos que la IA invierte en coche
 export const UPGRADE_LEAD_RACES = 2;           // carreras que tarda una mejora en fabricarse
-export const DEV_COST_CAP = 60;                // $M máximos de desarrollo por temporada (todos)
+export const DEV_COST_CAP = 60;                // $M máximos de desarrollo por temporada (base)
+export const DEV_CAP_GROWTH = 10;              // el cost cap crece $M/temporada (el dinero sube con los años)
+// Cost cap efectivo del año: crece con las temporadas para que haya en qué gastar.
+export const devCostCap = (season: number) => DEV_COST_CAP + DEV_CAP_GROWTH * Math.max(0, season - 2025);
 
 // ----- I+D con riesgo de correlación -----
 // Los proyectos entregan puntos con varianza (± una fracción de lo previsto).

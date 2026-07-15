@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useActiveGame } from '../context/GameContext';
 import { CIRCUITS } from '../data/circuits';
-import { COMPOUNDS, TICK_SPEEDS, TO_INTER_WETNESS } from '../data/constants';
+import { COMPOUNDS, TICK_SPEEDS, TO_INTER_WETNESS, SIM_QUALI_NOISE_CUT, FACTORY_PIT_DELTA } from '../data/constants';
 import { Circuit, Compound, Driver, DriverResult, RaceLength, RaceResultRecord, RaceState, SessionKind, Team } from '../types';
 import { Rng } from '../engine/rng';
 import { QualiResult, QualiSegment, simulateKnockout } from '../engine/qualifying';
@@ -64,7 +64,10 @@ export const RaceWeekend = () => {
 
     const knockout = useMemo(() => {
         const noiseMults: Record<string, number> = {};
-        for (const [id, fx] of Object.entries(staffFx)) noiseMults[id] = fx.qualiNoiseMult;
+        // Simulador: menos ruido en clasificación por nivel de instalación.
+        for (const [id, fx] of Object.entries(staffFx)) {
+            noiseMults[id] = fx.qualiNoiseMult * (1 - SIM_QUALI_NOISE_CUT * (game.teams[id].facilities.simulator - 1));
+        }
         return simulateKnockout(game.teams, game.drivers, circuit, new Rng(seed), setups ?? undefined, noiseMults);
         // la parrilla se calcula una vez, tras confirmar el setup
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -75,7 +78,9 @@ export const RaceWeekend = () => {
         const m: RaceState['mods'] = {};
         for (const teamId of Object.keys(game.teams)) {
             const q = setups?.[teamId] ?? SETUP_BASE_QUALITY;
-            m[teamId] = { setupLapDelta: -SETUP_LAP_BONUS_MAX * q, pitLossDelta: staffFx[teamId].pitLossDelta };
+            // Fábrica: paradas más rápidas por nivel de instalación.
+            const factoryPit = FACTORY_PIT_DELTA * (game.teams[teamId].facilities.factory - 1);
+            m[teamId] = { setupLapDelta: -SETUP_LAP_BONUS_MAX * q, pitLossDelta: staffFx[teamId].pitLossDelta - factoryPit };
         }
         return m;
         // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -13,7 +13,7 @@ import { CIRCUITS } from '../data/circuits';
 import { initialStaffAssignment } from '../data/staff';
 import {
     BOARD_GRACE_RACES, BOARD_MET_BUDGET_BONUS, BOARD_SEASON_BONUS_PATIENCE, BOARD_START_PATIENCE,
-    BOARD_TARGET_SLACK, DEV_COST_CAP, DIFFICULTY, MORALE_RENEW,
+    BOARD_TARGET_SLACK, DEV_COST_CAP, devCostCap, DIFFICULTY, MORALE_RENEW,
     PATIENCE_GAIN_PER_RACE, PATIENCE_LOSS_CAP, PATIENCE_LOSS_PER_RACE,
     REG_BASE_SEASON, REG_KEEP, REG_SHAKE_SD, REGULATION_PERIOD,
     SPONSOR_PER_RACE, STAT_CAP, UPGRADE_LEAD_RACES,
@@ -109,7 +109,7 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                     );
                 } else {
                     // la IA también desarrolla su coche (agresividad según dificultad, descuento del TD)
-                    aiDevelop(team, income, DEV_COST_CAP, DIFFICULTY[state.difficulty].aiDevFraction,
+                    aiDevelop(team, income, devCostCap(state.season), DIFFICULTY[state.difficulty].aiDevFraction,
                         staffEffects(team, state.staff).devDiscount);
                 }
             }
@@ -266,7 +266,7 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                 .filter(o => o.stat === action.stat)
                 .reduce((s, o) => s + o.points, 0);
             if (player.budget < action.cost) return state;
-            if (player.devSpendSeason + action.cost > DEV_COST_CAP) return state;
+            if (player.devSpendSeason + action.cost > devCostCap(state.season)) return state;
             if (player.car[action.stat] + queuedPoints + action.points > STAT_CAP) return state;
             const teams = {
                 ...state.teams,

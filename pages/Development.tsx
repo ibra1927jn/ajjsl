@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useActiveGame } from '../context/GameContext';
 import { CarStatKey, StaffRole } from '../types';
-import { DEV_COST_CAP, STAT_CAP, UPGRADE_LEAD_RACES, UPGRADE_STEP } from '../data/constants';
+import { devCostCap, STAT_CAP, UPGRADE_LEAD_RACES, UPGRADE_STEP } from '../data/constants';
 import { CIRCUITS } from '../data/circuits';
 import { ROLE_LABELS } from '../data/staff';
 import { upgradeCost } from '../engine/development';
@@ -22,6 +22,7 @@ const STATS: { key: CarStatKey; label: string; desc: string; Icon: React.FC<{ si
 export const Development = () => {
     const { game, dispatch } = useActiveGame();
     const player = game.teams[game.playerTeamId];
+    const cap = devCostCap(game.season);
     const [tab, setTab] = useState<DevTab>('car');
     const fx = staffEffects(player, game.staff);
 
@@ -67,13 +68,13 @@ export const Development = () => {
                 <div className="flex items-center justify-between mb-1">
                     <p className="text-sm font-bold">Cost cap de desarrollo</p>
                     <p className="text-sm tabular-nums text-text-sub">
-                        {money(player.devSpendSeason)} / {money(DEV_COST_CAP)}
+                        {money(player.devSpendSeason)} / {money(cap)}
                     </p>
                 </div>
                 <div className="h-2 bg-card-darker rounded-full overflow-hidden">
                     <div className="h-full rounded-full" style={{
-                        width: `${Math.min(100, (player.devSpendSeason / DEV_COST_CAP) * 100)}%`,
-                        background: player.devSpendSeason / DEV_COST_CAP > 0.85 ? '#ff4d4d' : '#e10600',
+                        width: `${Math.min(100, (player.devSpendSeason / cap) * 100)}%`,
+                        background: player.devSpendSeason / cap > 0.85 ? '#ff4d4d' : '#e10600',
                     }} />
                 </div>
                 {game.upgradeQueue.length > 0 && (
@@ -98,7 +99,7 @@ export const Development = () => {
                     const queued = game.upgradeQueue.filter(o => o.stat === key).reduce((s, o) => s + o.points, 0);
                     const cost = Math.round(upgradeCost(key, level + queued) * (1 - fx.devDiscount) * 10) / 10;
                     const capped = level + queued + UPGRADE_STEP > STAT_CAP;
-                    const overCap = player.devSpendSeason + cost > DEV_COST_CAP;
+                    const overCap = player.devSpendSeason + cost > cap;
                     const affordable = player.budget >= cost;
                     return (
                         <Card key={key}>
