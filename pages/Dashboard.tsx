@@ -7,7 +7,7 @@ import { computeDriverStandings, computeTeamStandings } from '../engine/season';
 import { Button, Card, SectionTitle, StatBar, money } from '../components/ui';
 
 export const Dashboard = () => {
-    const { game } = useActiveGame();
+    const { game, dispatch } = useActiveGame();
     const navigate = useNavigate();
     const player = game.teams[game.playerTeamId];
     const nextCircuit = game.phase === 'preRace' ? CIRCUITS[game.raceIndex] : null;
@@ -132,6 +132,40 @@ export const Dashboard = () => {
                     <Link to="/market" className="text-xs text-f1-red font-semibold hover:underline">Mercado de pilotos →</Link>
                 </Card>
             </div>
+
+            <Card>
+                <SectionTitle>Motores</SectionTitle>
+                <div className="space-y-3">
+                    {player.driverIds.map(id => {
+                        const d = game.drivers[id];
+                        const e = d.engine;
+                        const overPool = e.used > e.poolSize;
+                        return (
+                            <div key={id} className="flex items-center justify-between gap-3">
+                                <div className="flex-1">
+                                    <div className="flex justify-between text-xs mb-1">
+                                        <span className="font-semibold">{d.name}</span>
+                                        <span className={overPool ? 'text-danger' : 'text-text-sub'}>
+                                            Motor {e.used}/{e.poolSize} · desgaste {Math.round(e.wear * 100)}%
+                                            {e.gridPenaltyPending > 0 && <span className="text-danger font-bold"> · sanción parrilla</span>}
+                                        </span>
+                                    </div>
+                                    <div className="h-2 bg-card-darker rounded-full overflow-hidden">
+                                        <div className="h-full rounded-full" style={{ width: `${Math.min(100, e.wear * 100)}%`, background: e.wear > 0.8 ? '#ff4d4d' : '#e10600' }} />
+                                    </div>
+                                </div>
+                                <Button variant="ghost" onClick={() => dispatch({ type: 'TAKE_ENGINE', driverId: id })}>
+                                    PU nuevo
+                                </Button>
+                            </div>
+                        );
+                    })}
+                </div>
+                <p className="text-[11px] text-text-sub mt-2">
+                    3 motores por temporada. Correr en «atacar» los desgasta. Coger un 4º motor = salir del fondo:
+                    hazlo en un circuito donde adelantar sea fácil.
+                </p>
+            </Card>
         </div>
     );
 };

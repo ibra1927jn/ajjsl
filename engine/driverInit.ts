@@ -3,7 +3,7 @@ import { ENGINE_POOL } from '../data/constants';
 import { DEFAULT_AGE, DEFAULT_MORALE, DRIVER_AGES } from '../data/driverAges';
 
 export function freshEngine(): EngineAllocation {
-    return { used: 1, poolSize: ENGINE_POOL, gridPenaltyPending: 0 };
+    return { used: 1, poolSize: ENGINE_POOL, gridPenaltyPending: 0, wear: 0 };
 }
 
 // Completa un piloto base (sin age/morale/engine) con sus campos v4.

@@ -41,6 +41,7 @@ export interface EngineAllocation {
     used: number;               // unidades de potencia usadas esta temporada
     poolSize: number;           // permitidas sin penalización (3)
     gridPenaltyPending: number; // posiciones de sanción para la próxima carrera
+    wear: number;               // desgaste del motor actual (0-1; a 1 se cambia)
 }
 
 export interface Driver {
@@ -101,6 +102,7 @@ export interface CarState {
     paceMode: PaceMode;
     penaltySec: number;          // penalizaciones acumuladas, se suman en meta
     damage: number;              // daño de ala: s/vuelta hasta reparar en boxes
+    attackSectors: number;       // sectores corridos en 'attack' (desgaste de motor)
 }
 
 // Plan de la vuelta calculado en el sector 0 (transitorio, se reparte por sectores).
@@ -169,6 +171,7 @@ export interface RaceResultRecord {
     fastestLapTime?: number;
     fastestLapDriverId?: string;
     ledLapsDriverId?: string; // piloto que lideró (aprox. ganador) — para misiones
+    engineStress?: Record<string, number>; // driverId → fracción de sectores en attack
 }
 
 export interface LedgerEntry {
@@ -255,5 +258,6 @@ export type GameAction =
     | { type: 'POACH_DRIVER'; outDriverId: string; inDriverId: string; fee: number }
     | { type: 'RENEW_DRIVER'; driverId: string; fee: number }
     | { type: 'HIRE_STAFF'; staffId: string; fee: number }
+    | { type: 'TAKE_ENGINE'; driverId: string }
     | { type: 'ADVANCE_SEASON' }
     | { type: 'RESET' };

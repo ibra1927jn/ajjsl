@@ -34,11 +34,16 @@ export function finalizeRace(
         });
     }
 
+    const totalSectors = Math.max(1, state.totalLaps * 3);
+    const engineStress: Record<string, number> = {};
+    for (const car of state.cars) engineStress[car.driverId] = car.attackSectors / totalSectors;
+
     return {
         raceIndex, circuitId: state.circuitId, season, classification, polesitterId,
         fastestLapTime: state.fastestLap?.time,
         fastestLapDriverId: state.fastestLap?.driverId,
         ledLapsDriverId: classification[0]?.driverId, // aprox.: el ganador lideró
+        engineStress,
     };
 }
 

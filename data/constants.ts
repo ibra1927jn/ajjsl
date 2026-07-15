@@ -167,6 +167,8 @@ export const DEV_COST_CAP = 60;                // $M máximos de desarrollo por 
 // ----- Motores -----
 export const ENGINE_POOL = 3;            // unidades de potencia por temporada sin penalización
 export const GRID_PENALTY_BACK = 20;     // exceder el pool = salir del fondo
+export const BASE_ENGINE_WEAR_PER_RACE = 0.12; // desgaste base por carrera (~8 carreras/motor)
+export const ENGINE_ATTACK_WEAR = 0.10;  // desgaste extra si corres toda la carrera en 'attack'
 
 // ----- Dificultad -----
 export interface DifficultySpec {

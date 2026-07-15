@@ -9,6 +9,7 @@ import { QualiResult, simulateQualifying } from '../engine/qualifying';
 import { finalizeRace, finalizeSprint, prizeFor } from '../engine/results';
 import { generateWeather } from '../engine/weather';
 import { scaledLaps } from '../engine/race';
+import { applyGridPenalties } from '../engine/engines';
 import { feedbackFor, generateSetupContext, qualityOf, SetupValues, SliderFeedback } from '../engine/setup';
 import { staffEffects, StaffEffects } from '../engine/staff';
 import { PRACTICE_RUNS, SETUP_BASE_QUALITY, SETUP_LAP_BONUS_MAX, SETUP_MAX, SETUP_MIN, SETUP_SLIDERS, SPRINT_LAP_FRACTION } from '../data/constants';
@@ -98,9 +99,13 @@ export const RaceWeekend = () => {
     }
 
     // La parrilla de la carrera en fin de semana sprint es el resultado del sprint.
-    const raceGrid: QualiResult[] = isSprint && sprintResult
-        ? sprintResult.map(r => ({ driverId: r.driverId, teamId: r.teamId, time: 0 }))
-        : grid;
+    // Se aplican las sanciones de motor (pilotos penalizados al fondo).
+    const raceGrid: QualiResult[] = applyGridPenalties(
+        isSprint && sprintResult
+            ? sprintResult.map(r => ({ driverId: r.driverId, teamId: r.teamId, time: 0 }))
+            : grid,
+        game.drivers,
+    );
 
     const onSprintFinished = (raceState: RaceState) => {
         const res = finalizeSprint(raceState);

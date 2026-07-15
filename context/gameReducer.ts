@@ -1,5 +1,6 @@
 import { Difficulty, Driver, GameAction, GameState, RaceLength, StaffMember, Team } from '../types';
 import { hydrateDriver } from '../engine/driverInit';
+import { wearEngine, fitNewEngine } from '../engine/engines';
 import { TEAMS } from '../data/teams';
 import { DRIVERS } from '../data/drivers';
 import { CIRCUITS } from '../data/circuits';
@@ -117,6 +118,23 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                 ledger.push({ raceIndex, label: `Mejora de ${order.stat} (+${order.points}) montada en el coche`, amount: 0 });
             }
 
+            // Motores: desgaste de la carrera + limpieza de sanciones ya aplicadas.
+            const drivers: Record<string, Driver> = {};
+            for (const [id, d] of Object.entries(state.drivers)) {
+                drivers[id] = { ...d, engine: { ...d.engine, gridPenaltyPending: 0 } };
+            }
+            for (const team of Object.values(teams)) {
+                for (const id of team.driverIds) {
+                    const d = drivers[id];
+                    if (!d) continue;
+                    const stress = record.engineStress?.[id] ?? 0;
+                    const news = wearEngine(d.engine, stress, d.name);
+                    if (news && team.id === state.playerTeamId) {
+                        ledger.push({ raceIndex, label: news, amount: 0 });
+                    }
+                }
+            }
+
             // La junta evalúa tras cada carrera contra el objetivo de constructores.
             // Periodo de gracia al inicio de temporada: los standings tempranos son ruido.
             const results = [...state.results, record];
@@ -136,12 +154,22 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
             return {
                 ...state,
                 teams,
+                drivers,
                 ledger,
                 results,
                 raceIndex,
                 upgradeQueue: pending,
                 board: { ...state.board, patience },
                 phase: fired ? 'gameOver' : raceIndex >= CIRCUITS.length ? 'postSeason' : 'preRace',
+            };
+        }
+
+        case 'TAKE_ENGINE': {
+            const d = state.drivers[action.driverId];
+            if (!d || d.teamId !== state.playerTeamId) return state;
+            return {
+                ...state,
+                drivers: { ...state.drivers, [d.id]: { ...d, engine: fitNewEngine(d.engine) } },
             };
         }
 
@@ -302,7 +330,10 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                 player.car[order.stat] = Math.min(STAT_CAP, player.car[order.stat] + order.points);
             }
             const drivers: Record<string, Driver> = {};
-            for (const [id, d] of Object.entries(state.drivers)) drivers[id] = { ...d };
+            // Nueva temporada: los pools de motor se resetean a 3.
+            for (const [id, d] of Object.entries(state.drivers)) {
+                drivers[id] = { ...d, engine: { used: 1, poolSize: d.engine.poolSize, gridPenaltyPending: 0, wear: 0 } };
+            }
             const news: string[] = [];
             const rng = new Rng(state.season);
 

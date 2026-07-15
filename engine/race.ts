@@ -76,6 +76,7 @@ export function createRaceState(
             paceMode: 'normal' as const,
             penaltySec: 0,
             damage: 0,
+            attackSectors: 0,
         };
     });
     const kindLabel = opts.kind === 'sprint' ? 'Sprint' : 'Carrera';
@@ -303,6 +304,7 @@ export function advanceSector(
         car.lapAccum += base;
         car.lastSector = base;
         car.tireAge += (PACE_MODES[car.paceMode].degMult * dryTrackDegMult(car.compound, wetness)) / 3;
+        if (car.paceMode === 'attack' && state.phase === 'green') car.attackSectors += 1; // desgasta el motor
         if (car.bestSectors[s] === 0 || base < car.bestSectors[s]) car.bestSectors[s] = base;
 
         // Al cerrar la vuelta: fijar tiempo de vuelta y ejecutar la parada.
