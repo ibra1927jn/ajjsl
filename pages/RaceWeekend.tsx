@@ -19,7 +19,8 @@ import { TimingTower } from '../components/TimingTower';
 import { EventFeed } from '../components/EventFeed';
 import { PitControls } from '../components/PitControls';
 import { TrackMap } from '../components/TrackMap';
-import { Button, Card, SectionTitle, TeamStripe, formatLapTime, money } from '../components/ui';
+import { Button, Card, SectionTitle, StatusPill, TeamStripe, formatLapTime, money } from '../components/ui';
+import { IconPlay, IconPause } from '../components/icons';
 
 type Step = 'practice' | 'quali' | 'sprint' | 'sprintResults' | 'race' | 'results';
 
@@ -365,7 +366,7 @@ const QualiScreen = ({ grid, teams, drivers, playerTeamId, forecast, setupQualit
             </div>
             <div className="flex-1 min-w-[180px]">
                 <p className="text-xs text-text-sub uppercase font-bold tracking-wider mb-1">
-                    Compuesto de salida {wetStart && <span className="text-[#4aa8ff]">(salida en mojado: I/W forzado)</span>}
+                    Compuesto de salida {wetStart && <span className="text-weather-blue">(salida en mojado: I/W forzado)</span>}
                 </p>
                 <div className="flex gap-2">
                     {(Object.keys(COMPOUNDS) as Compound[]).map(c => (
@@ -407,45 +408,56 @@ const SessionRunner = ({ kind, grid, circuit, teams, drivers, playerTeamId, seed
 
     return (
         <div className="space-y-3">
-            <div className="flex items-center justify-between bg-card-dark border border-border-dark rounded-2xl px-4 py-2">
-                <span className="font-extrabold tabular-nums">
-                    {kind === 'sprint' && <span className="text-pit-yellow mr-2">SPRINT</span>}
-                    Vuelta {Math.min(race.lap + (finished ? 0 : 1), race.totalLaps)}/{race.totalLaps}
-                    {!finished && <span className="ml-1.5 text-text-sub text-xs font-bold">S{race.sector + 1}</span>}
-                    {race.phase === 'safetyCar' && <span className="ml-2 text-pit-yellow text-xs font-bold animate-pulse">SAFETY CAR</span>}
-                    {race.phase === 'vsc' && <span className="ml-2 text-pit-yellow text-xs font-bold animate-pulse">VSC</span>}
-                    {wetness >= 0.05 && (
-                        <span className="ml-2 text-[#4aa8ff] text-xs font-bold">🌧️ {Math.round(wetness * 100)}%</span>
-                    )}
-                </span>
-                <div className="flex items-center gap-1">
+            <div className="flex items-center justify-between gap-2 bg-card-dark border border-border-dark rounded-2xl px-3 py-2 shadow-panel">
+                <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-display font-bold tabular-nums text-lg leading-none whitespace-nowrap">
+                        <span className="text-text-dim text-xs align-middle mr-1">V</span>
+                        {Math.min(race.lap + (finished ? 0 : 1), race.totalLaps)}
+                        <span className="text-text-dim">/{race.totalLaps}</span>
+                        {!finished && <span className="ml-1.5 text-text-sub text-xs">S{race.sector + 1}</span>}
+                    </span>
+                    <div className="flex items-center gap-1 overflow-hidden">
+                        {kind === 'sprint' && <StatusPill tone="yellow">Sprint</StatusPill>}
+                        {race.phase === 'safetyCar' && <StatusPill tone="yellow" pulse>SC</StatusPill>}
+                        {race.phase === 'vsc' && <StatusPill tone="yellow" pulse>VSC</StatusPill>}
+                        {wetness >= 0.05 && <StatusPill tone="blue">🌧 {Math.round(wetness * 100)}%</StatusPill>}
+                    </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
                     {!finished && (
                         <>
-                            <button onClick={() => setPaused(!paused)}
-                                className="px-3 py-1 rounded-lg text-xs font-bold bg-card-darker border border-border-dark hover:border-f1-red">
-                                {paused ? '▶ Reanudar' : '⏸ Pausa'}
+                            <button onClick={() => setPaused(!paused)} aria-label={paused ? 'Reanudar' : 'Pausar'}
+                                className="flex items-center justify-center w-8 h-8 rounded-lg bg-card-darker border border-border-dark hover:border-f1-red transition-colors">
+                                {paused ? <IconPlay size={16} /> : <IconPause size={16} />}
                             </button>
-                            {TICK_SPEEDS.map((s, i) => (
-                                <button key={s.label} onClick={() => setSpeedIdx(i)}
-                                    className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${speedIdx === i ? 'bg-f1-red border-f1-red text-white' : 'bg-card-darker border-border-dark hover:border-f1-red'}`}>
-                                    {s.label}
-                                </button>
-                            ))}
+                            <div className="flex items-center rounded-lg border border-border-dark overflow-hidden">
+                                {TICK_SPEEDS.map((s, i) => (
+                                    <button key={s.label} onClick={() => setSpeedIdx(i)}
+                                        className={`font-display px-2.5 py-1.5 text-xs font-bold transition-colors ${speedIdx === i ? 'bg-f1-red text-white' : 'bg-card-darker text-text-sub hover:text-text-main'}`}>
+                                        {s.label}
+                                    </button>
+                                ))}
+                            </div>
                         </>
                     )}
-                    {finished && <Button onClick={() => onFinished(race)}>Ver resultados →</Button>}
+                    {finished && <Button size="sm" onClick={() => onFinished(race)}>Ver resultados →</Button>}
                 </div>
             </div>
 
+            {/* Orden en móvil: mapa → muro de boxes (accionable) → torre → feed. */}
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
-                <div className="lg:col-span-3 space-y-3">
-                    <TrackMap race={race} teams={teams} playerTeamId={playerTeamId}
+                <div className="lg:col-span-3 lg:row-start-1 order-1">
+                    <TrackMap race={race} teams={teams} drivers={drivers} playerTeamId={playerTeamId}
                         tickMs={TICK_SPEEDS[speedIdx].ms} paused={paused} avgLapSec={circuit.baseLapSec} />
-                    <TimingTower race={race} teams={teams} drivers={drivers} playerTeamId={playerTeamId} />
                 </div>
-                <div className="lg:col-span-2 space-y-3">
+                <div className="lg:col-span-2 lg:row-start-1 lg:col-start-4 order-2">
                     <PitControls race={race} playerTeamId={playerTeamId} drivers={drivers}
                         onQueuePit={queuePit} onPaceMode={setPaceMode} onSwap={requestSwap} />
+                </div>
+                <div className="lg:col-span-3 lg:row-start-2 lg:col-start-1 order-3">
+                    <TimingTower race={race} teams={teams} drivers={drivers} playerTeamId={playerTeamId} />
+                </div>
+                <div className="lg:col-span-2 lg:row-start-2 lg:col-start-4 order-4">
                     <EventFeed events={race.events} />
                 </div>
             </div>
