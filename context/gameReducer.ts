@@ -1,6 +1,7 @@
 import { Difficulty, Driver, GameAction, GameState, RaceLength, StaffMember, Team } from '../types';
 import { hydrateDriver } from '../engine/driverInit';
 import { wearEngine, fitNewEngine } from '../engine/engines';
+import { ageAndProgress } from '../engine/progression';
 import { TEAMS } from '../data/teams';
 import { DRIVERS } from '../data/drivers';
 import { CIRCUITS } from '../data/circuits';
@@ -336,6 +337,18 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
             }
             const news: string[] = [];
             const rng = new Rng(state.season);
+
+            // Envejecimiento y progresión + retiros por edad.
+            const prog = ageAndProgress(drivers, rng);
+            news.push(...prog.news);
+            for (const id of prog.retired) {
+                const d = drivers[id];
+                if (d?.teamId) {
+                    const team = teams[d.teamId];
+                    if (team) team.driverIds = team.driverIds.filter(x => x !== id);
+                }
+                delete drivers[id];
+            }
 
             // Los contratos expiran de verdad: a 0 años, el piloto queda libre.
             for (const d of Object.values(drivers)) {

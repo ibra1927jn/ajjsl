@@ -18,7 +18,7 @@ const DriverCard = ({ driver, sub, footer }: { driver: Driver; sub?: string; foo
             <StatBar label="Experiencia" value={driver.experience} color="#b45bff" />
         </div>
         <p className="text-xs text-text-sub mb-2">
-            Salario {money(driver.salary)}/año
+            {driver.age} años · Salario {money(driver.salary)}/año
             {driver.contractYears > 0 && ` · ${driver.contractYears} año${driver.contractYears > 1 ? 's' : ''} de contrato`}
         </p>
         {footer}

@@ -206,6 +206,12 @@ export const REG_BASE_SEASON = 2025;  // la primera sacudida llega en 2028
 export const REG_KEEP = 0.5;          // cuánto del coche viejo sobrevive al reset
 export const REG_SHAKE_SD = 6;        // sacudida aleatoria (puntos de stat)
 
+// ----- Progresión y edad de pilotos -----
+export const PROG_YOUNG_AGE = 23;        // hasta esta edad, los pilotos crecen
+export const PROG_PEAK_END = 31;         // a partir de aquí empiezan a declinar
+export const RETIRE_AGE = 37;            // edad a la que empieza el riesgo de retiro
+export const RETIRE_HARD_AGE = 42;       // retiro seguro
+
 // ----- Mercado -----
 export const SIGNING_FEE_FACTOR = 0.5;   // prima de fichaje = salario × factor
 export const BUYOUT_FACTOR = 0.6;        // cláusula = prima + años restantes × salario × factor
