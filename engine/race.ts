@@ -113,6 +113,7 @@ export function createRaceState(
             ers: 1,                       // batería llena en la salida (constante, sin rng)
             ersMode: 'balanced' as const,
             compoundsUsed: [compound],    // el compuesto de salida cuenta para la regla
+            lastPassedLap: -99,
         };
     });
     const kindLabel = opts.kind === 'sprint' ? 'Sprint' : 'Carrera';

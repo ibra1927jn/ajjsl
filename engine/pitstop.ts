@@ -48,7 +48,7 @@ export function aiDecidePits(state: RaceState, circuit: Circuit, playerTeamId: s
         // Reacciona a un rival cercano que va a parar o que rueda con neumático más
         // viejo → parar ahora para saltarle con gomas frescas.
         const life0 = compoundLife(car.compound, circuit, state.raceLength);
-        if (isSlickDry && state.phase === 'green' && lapsLeft > 4 && car.tireAge >= life0 * UNDERCUT_LIFE_FRAC) {
+        if (state.kind !== 'sprint' && isSlickDry && state.phase === 'green' && lapsLeft > 4 && car.tireAge >= life0 * UNDERCUT_LIFE_FRAC) {
             const idx = running.indexOf(car);
             const neighbours = [running[idx - 1], running[idx + 1]].filter(Boolean) as CarState[];
             const rival = neighbours.find(r =>
@@ -84,10 +84,14 @@ export function aiDecidePits(state: RaceState, circuit: Circuit, playerTeamId: s
             continue;
         }
 
+        // En sprint no se para por desgaste (la vida se mide sobre la distancia de GP,
+        // no del sprint): solo cuentan los crossovers de clima, ya resueltos arriba.
+        if (state.kind === 'sprint') continue;
+
         // --- Desgaste (lógica de seco de la v1) ---
         const life = compoundLife(car.compound, circuit, state.raceLength);
-        // En sprint no hay parada obligatoria.
-        const mustTakeMandatory = state.kind !== 'sprint' && car.pitCount === 0 && lapsLeft <= 5;
+        // Parada obligatoria de fondo (los sprints ya salieron arriba).
+        const mustTakeMandatory = car.pitCount === 0 && lapsLeft <= 5;
         if (lapsLeft <= 2 && !mustTakeMandatory) continue;
 
         const wornOut = car.tireAge >= life * (0.9 + rng.next() * 0.25);

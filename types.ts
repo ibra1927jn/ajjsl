@@ -128,6 +128,7 @@ export interface CarState {
     ers: number;                 // carga de batería 0-1
     ersMode: ErsMode;            // modo de despliegue de energía
     compoundsUsed: Compound[];   // compuestos montados (para la regla de dos compuestos)
+    lastPassedLap: number;       // última vuelta en que fue adelantado (histéresis anti-ping-pong)
 }
 
 // Plan de la vuelta calculado en el sector 0 (transitorio, se reparte por sectores).

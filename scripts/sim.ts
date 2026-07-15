@@ -123,21 +123,22 @@ function wetSeason() {
 function sprintCheck() {
     const game = createNewGame(PLAYER);
     const circuit = CIRCUITS.find(c => c.id === 'china')!;
-    const grid = simulateQualifying(game.teams, game.drivers, circuit, new Rng(7));
+    const grid = simulateQualifying(game.teams, game.drivers, circuit, new Rng(3));
     const laps = Math.max(5, Math.round(scaledLaps(circuit) * SPRINT_LAP_FRACTION));
-    let race = createRaceState(grid, circuit, PLAYER, 8, { kind: 'sprint', lapsOverride: laps });
+    let race = createRaceState(grid, circuit, PLAYER, 4, { kind: 'sprint', lapsOverride: laps });
+    const maxWet = Math.max(...race.weather.wetness);
     let guard = 0;
     while (race.phase !== 'finished' && guard++ < 500) {
         race = advanceLap(race, circuit, game.teams, game.drivers, PLAYER);
     }
     const res = finalizeSprint(race);
-    console.log(`\n=== Sprint China (${race.totalLaps} vueltas) ===`);
+    console.log(`\n=== Sprint China (${race.totalLaps} vueltas, maxWet=${maxWet.toFixed(2)}) ===`);
     for (const r of res.slice(0, 8)) {
         const car = race.cars.find(c => c.driverId === r.driverId)!;
         console.log(`P${r.position} ${r.driverId.padEnd(12)} pts=${r.points} pits=${car.pitCount}`);
     }
     const noPit = race.cars.filter(c => c.status === 'running' && c.pitCount === 0).length;
-    console.log(`coches sin parar (esperado ~20 en seco): ${noPit}`);
+    console.log(`coches sin parar (${maxWet < 0.22 ? 'seco → esperado ~20' : 'mojado → normal parar'}): ${noPit}`);
 }
 
 // Reanudar = correr del tirón: serializa en la vuelta N y compara el final.

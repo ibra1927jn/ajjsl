@@ -1,5 +1,5 @@
 import { Circuit, Compound, RaceState } from '../types';
-import { SC_FREE_STOP_AGE, SLICKS, WET_RACE_THRESHOLD } from '../data/constants';
+import { SC_FREE_STOP_AGE, SLICKS, TO_INTER_WETNESS } from '../data/constants';
 import { compoundLife } from './pitstop';
 
 // Consejo de estrategia por coche del jugador (puro, solo lectura — cero rng,
@@ -30,7 +30,7 @@ export function strategyAdvice(
 ): StratAdvice[] {
     const running = race.cars.filter(c => c.status === 'running');
     const lapsLeft = race.totalLaps - race.lap;
-    const dryRace = Math.max(...race.weather.wetness) <= WET_RACE_THRESHOLD;
+    const dryRace = Math.max(...race.weather.wetness) < TO_INTER_WETNESS;
 
     return race.cars
         .filter(c => c.teamId === playerTeamId && c.status === 'running')

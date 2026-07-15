@@ -2,7 +2,7 @@ import { CarState, Circuit, Driver, RaceEvent } from '../types';
 import {
     CONTACT_ATTACKER_LOSS, CONTACT_DEFENDER_CHANCE, CONTACT_DEFENDER_LOSS, CONTACT_PENALTY_SEC,
     DAMAGE_CHANCE_ON_CONTACT, DRS_OVERTAKE_ADD, DUEL_CONTACT_CHANCE, ERS_OVERTAKE_ADD, FRONT_WING_PENALTY,
-    OVERTAKE_BASE, OVERTAKE_PACE_FACTOR, OVERTAKE_STUCK_GAP, TRAIT_AGGRO_OVERTAKE_ADD, TRAIT_HOTHEAD_CONTACT_ADD,
+    OVERTAKE_BASE, OVERTAKE_COOLDOWN_LAPS, OVERTAKE_PACE_FACTOR, OVERTAKE_STUCK_GAP, TRAIT_AGGRO_OVERTAKE_ADD, TRAIT_HOTHEAD_CONTACT_ADD,
 } from '../data/constants';
 import { Rng } from './rng';
 
@@ -46,6 +46,13 @@ export function resolveOvertakes(
                 continue;
             }
 
+            // Histéresis: un coche recién adelantado no re-ataca en seguida (evita el
+            // ping-pong de posiciones por ruido de vuelta). Se queda en aire sucio.
+            if (lap - behind.lastPassedLap <= OVERTAKE_COOLDOWN_LAPS) {
+                behind.totalTime = ahead.totalTime + OVERTAKE_STUCK_GAP;
+                continue;
+            }
+
             const attacker = drivers[behind.driverId];
             const paceDelta = Math.max(0, ahead.lastLap - behind.lastLap);
             const racecraftFactor = 0.6 + (attacker.racecraft / 100) * 0.8;
@@ -63,6 +70,7 @@ export function resolveOvertakes(
                 order[i - 1] = behind;
                 order[i] = ahead;
                 swapped = true;
+                ahead.lastPassedLap = lap; // el adelantado entra en cooldown
                 const defender = drivers[ahead.driverId];
                 events.push({
                     lap,

@@ -15,7 +15,7 @@ export const RACE_LENGTH_SCALE: Record<import('../types').RaceLength, number> = 
 
 // ----- Rendimiento -----
 export const CAR_WEIGHTS = { aero: 0.4, engine: 0.35, chassis: 0.25 };
-export const CAR_SHARE = 0.75;            // peso del coche en el rating total (piloto = 0.25)
+export const CAR_SHARE = 0.70;            // peso del coche en el rating total (piloto = 0.30)
 export const PERF_SEC_PER_POINT = 0.06;   // segundos/vuelta por punto de rating perdido
 
 // ----- Neumáticos -----
@@ -105,9 +105,10 @@ export const DAMAGE_REPAIR_PIT_LOSS = 8;  // s extra en la parada para reparar
 export const DAMAGE_CHANCE_ON_CONTACT = 0.5; // prob. de romper ala en un contacto
 
 // ----- Adelantamientos -----
-export const OVERTAKE_BASE = 0.5;        // probabilidad base de intento exitoso
-export const OVERTAKE_STUCK_GAP = 0.4;   // s a los que se queda clavado si falla
+export const OVERTAKE_BASE = 0.35;       // probabilidad base de intento exitoso
+export const OVERTAKE_STUCK_GAP = 0.9;   // s a los que se queda clavado si falla (zona de aire sucio)
 export const OVERTAKE_PACE_FACTOR = 0.35;// bonus por cada segundo de delta de ritmo
+export const OVERTAKE_COOLDOWN_LAPS = 2; // tras perder la posición no re-ataca durante N vueltas
 
 // ----- Sectores -----
 export const DEFAULT_SECTOR_SPLIT: [number, number, number] = [0.34, 0.33, 0.33];
@@ -147,7 +148,7 @@ export const TRAIT_WET_ERROR_MULT = 0.6;     // mago de la lluvia: ×error en mo
 export const TRAIT_AGGRO_OVERTAKE_ADD = 0.06;// agresivo: +prob. de adelantar
 export const TRAIT_HOTHEAD_CONTACT_ADD = 0.04;// cabeza caliente: +prob. de contacto
 export const TRAIT_IRON_ERROR_MULT = 0.7;    // nervios de acero: ×error
-export const TRAIT_QUALI_NOISE_MULT = 0.85;  // especialista a una vuelta: ×ruido en quali
+export const TRAIT_QUALI_NOISE_MULT = 0.72;  // especialista a una vuelta: ×ruido en quali
 
 // ----- ERS / energía (dial del jugador + política IA) -----
 // lapDelta = bonus/penalización de ritmo (− = más rápido); charge = Δ carga por
@@ -169,8 +170,8 @@ export const ERS_OVERTAKE_ADD = 0.08; // prob. extra de adelantamiento (aditiva,
 export const AI_STINT_JITTER = 0.15;     // ±15% sobre el stint objetivo
 export const SC_FREE_STOP_AGE = 0.6;     // la IA para bajo SC si su neumático supera este % de vida
 // Ritmo reactivo de la IA (puro, sin rng): ataca en pelea, conserva en aire limpio.
-export const AI_THREAT_GAP = 0.9;        // le aprietan por detrás dentro de este gap → defiende (attack)
-export const AI_CHASE_GAP = 1.3;         // caza al de delante dentro de este gap → attack
+export const AI_THREAT_GAP = 0.6;        // le aprietan por detrás dentro de este gap → defiende (attack)
+export const AI_CHASE_GAP = 0.8;         // caza al de delante dentro de este gap → attack
 export const AI_CLEAN_AIR_GAP = 2.5;     // sin nadie cerca → puede conservar
 export const AI_CONSERVE_LIFE = 0.6;     // conserva solo si el neumático supera este % de vida
 // Undercut/overcut de la IA (aleatoriedad en Rng dedicado, no toca el flujo principal).

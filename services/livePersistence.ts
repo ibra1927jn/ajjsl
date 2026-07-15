@@ -2,7 +2,7 @@ import { Compound, DriverResult, RaceState } from '../types';
 
 // Estado vivo del fin de semana (carrera a medias). Clave separada del save
 // principal; se descarta si no coincide con la partida — nunca se migra.
-export const LIVE_VERSION = 5; // v5: ERS + compoundsUsed (regla de dos compuestos)
+export const LIVE_VERSION = 6; // v6: + lastPassedLap (histéresis de adelantamiento)
 const KEY = 'f1m_live';
 
 export interface LiveSave {
