@@ -2,13 +2,14 @@ import { Difficulty, Driver, GameAction, GameState, RaceLength, StaffMember, Tea
 import { hydrateDriver } from '../engine/driverInit';
 import { wearEngine, fitNewEngine } from '../engine/engines';
 import { ageAndProgress } from '../engine/progression';
+import { applyRaceMorale } from '../engine/morale';
 import { TEAMS } from '../data/teams';
 import { DRIVERS } from '../data/drivers';
 import { CIRCUITS } from '../data/circuits';
 import { initialStaffAssignment } from '../data/staff';
 import {
     BOARD_GRACE_RACES, BOARD_MET_BUDGET_BONUS, BOARD_SEASON_BONUS_PATIENCE, BOARD_START_PATIENCE,
-    BOARD_TARGET_SLACK, DEV_COST_CAP, DIFFICULTY,
+    BOARD_TARGET_SLACK, DEV_COST_CAP, DIFFICULTY, MORALE_RENEW,
     PATIENCE_GAIN_PER_RACE, PATIENCE_LOSS_CAP, PATIENCE_LOSS_PER_RACE,
     REG_BASE_SEASON, REG_KEEP, REG_SHAKE_SD, REGULATION_PERIOD,
     SPONSOR_PER_RACE, STAT_CAP, UPGRADE_LEAD_RACES,
@@ -135,6 +136,8 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                     }
                 }
             }
+            // Moral: se mueve por resultado y por batir (o no) al compañero.
+            applyRaceMorale(drivers, record);
 
             // La junta evalúa tras cada carrera contra el objetivo de constructores.
             // Periodo de gracia al inicio de temporada: los standings tempranos son ruido.
@@ -305,7 +308,7 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                 ...state,
                 drivers: {
                     ...state.drivers,
-                    [driver.id]: { ...driver, contractYears: driver.contractYears + 2 },
+                    [driver.id]: { ...driver, contractYears: driver.contractYears + 2, morale: Math.min(100, driver.morale + MORALE_RENEW) },
                 },
                 teams: {
                     ...state.teams,

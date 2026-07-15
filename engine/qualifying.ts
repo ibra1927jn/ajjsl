@@ -1,6 +1,7 @@
 import { Circuit, Driver, Team } from '../types';
 import { QUALI_NOISE_BASE, QUALI_RUNS, SETUP_BASE_QUALITY, SETUP_LAP_BONUS_MAX, SETUP_QUALI_NOISE_REDUCTION } from '../data/constants';
 import { perfDelta } from './performance';
+import { moraleLapDelta } from './morale';
 import { Rng } from './rng';
 
 export interface QualiResult {
@@ -24,7 +25,7 @@ export function simulateQualifying(
         const setupQ = setups?.[team.id] ?? SETUP_BASE_QUALITY;
         for (const driverId of team.driverIds) {
             const driver = drivers[driverId];
-            const delta = perfDelta(team, driver) - SETUP_LAP_BONUS_MAX * setupQ;
+            const delta = perfDelta(team, driver) + moraleLapDelta(driver.morale) - SETUP_LAP_BONUS_MAX * setupQ;
             const noiseSd = QUALI_NOISE_BASE
                 * (1.5 - (driver.consistency * 0.5 + driver.experience * 0.5) / 100)
                 * (1 - SETUP_QUALI_NOISE_REDUCTION * setupQ)

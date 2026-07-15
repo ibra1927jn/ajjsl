@@ -206,6 +206,16 @@ export const REG_BASE_SEASON = 2025;  // la primera sacudida llega en 2028
 export const REG_KEEP = 0.5;          // cuánto del coche viejo sobrevive al reset
 export const REG_SHAKE_SD = 6;        // sacudida aleatoria (puntos de stat)
 
+// ----- Moral -----
+export const MORALE_LAP_COEF = 0.08;   // s/vuelta a moral extrema (100 = −0.08, 0 = +0.08)
+export const MORALE_WIN = 8;
+export const MORALE_PODIUM = 5;
+export const MORALE_POINTS = 2;
+export const MORALE_NOPOINTS = -2;
+export const MORALE_DNF = -5;
+export const MORALE_TEAMMATE = 3;      // batir al compañero ±
+export const MORALE_RENEW = 10;        // renovar contrato sube la moral
+
 // ----- Progresión y edad de pilotos -----
 export const PROG_YOUNG_AGE = 23;        // hasta esta edad, los pilotos crecen
 export const PROG_PEAK_END = 31;         // a partir de aquí empiezan a declinar

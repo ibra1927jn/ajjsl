@@ -12,6 +12,7 @@ import { rollIncidents } from './incidents';
 import { aiDecidePits, compoundLife } from './pitstop';
 import { resolveOvertakes } from './overtaking';
 import { compoundWetPenalty, dryTrackDegMult, generateWeather, wetLapPenalty } from './weather';
+import { moraleLapDelta } from './morale';
 import { collectRadio } from './radio';
 import { DRS_LAP_GAIN, DRS_RANGE, PACE_MODES, TEAM_ORDER_CUSHION, TO_INTER_WETNESS, TO_WET_WETNESS, WET_NOISE_FACTOR } from '../data/constants';
 import { Rng } from './rng';
@@ -134,6 +135,7 @@ function raceLapTime(
 
     return circuit.baseLapSec
         + perfDelta(team, driver)
+        + moraleLapDelta(driver.morale)
         + car.formOffset
         + comp.offset
         + car.damage

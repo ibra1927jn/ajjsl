@@ -16,6 +16,7 @@ const DriverCard = ({ driver, sub, footer }: { driver: Driver; sub?: string; foo
             <StatBar label="Racecraft" value={driver.racecraft} color="#ffd12e" />
             <StatBar label="Consistencia" value={driver.consistency} color="#00d26a" />
             <StatBar label="Experiencia" value={driver.experience} color="#b45bff" />
+            <StatBar label="Moral" value={driver.morale} color={driver.morale >= 60 ? '#00d26a' : driver.morale >= 35 ? '#ffd12e' : '#ff4d4d'} />
         </div>
         <p className="text-xs text-text-sub mb-2">
             {driver.age} años · Salario {money(driver.salary)}/año
