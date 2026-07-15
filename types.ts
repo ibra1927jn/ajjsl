@@ -245,6 +245,21 @@ export interface BoardState {
     patience: number;  // 0-100; a 0 la junta te despide
 }
 
+// Evento de decisión (junta/prensa/patrocinador) con opciones y consecuencias.
+export interface EventChoice {
+    label: string;
+    outcome: string;    // texto tras elegir
+    budget?: number;    // ± $M al presupuesto del jugador
+    patience?: number;  // ± paciencia de la junta
+    moraleAll?: number; // ± moral de tus dos pilotos
+}
+export interface DecisionEvent {
+    id: string;
+    source: 'board' | 'press' | 'sponsor';
+    prompt: string;
+    choices: EventChoice[];
+}
+
 // Registro de una temporada terminada (nombres denormalizados: los pilotos
 // retirados desaparecen del estado, el palmarés debe sobrevivirlos).
 export interface SeasonRecord {
@@ -277,6 +292,7 @@ export interface GameState {
     raceLength: RaceLength;
     records: Record<string, CircuitRecord>;      // circuitId → record de vuelta
     driverRecords: Record<string, DriverCareer>; // driverId → estadísticas de carrera
+    pendingEvent?: DecisionEvent | null;         // evento de decisión sin resolver
 }
 
 export type GameAction =
@@ -290,5 +306,6 @@ export type GameAction =
     | { type: 'HIRE_STAFF'; staffId: string; fee: number }
     | { type: 'TAKE_ENGINE'; driverId: string }
     | { type: 'UPGRADE_FACILITY'; facility: keyof Facilities; cost: number }
+    | { type: 'RESOLVE_EVENT'; choiceIndex: number }
     | { type: 'ADVANCE_SEASON' }
     | { type: 'RESET' };

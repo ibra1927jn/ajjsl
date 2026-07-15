@@ -4,6 +4,7 @@ import { wearEngine, fitNewEngine } from '../engine/engines';
 import { ageAndProgress } from '../engine/progression';
 import { applyRaceMorale } from '../engine/morale';
 import { generateMissions, evaluateMissions } from '../engine/missions';
+import { generateDecisionEvent } from '../engine/events';
 import { applyRaceToRecords } from '../engine/records';
 import { TEAMS } from '../data/teams';
 import { DRIVERS } from '../data/drivers';
@@ -182,7 +183,7 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                         : state.board.patience - Math.min(PATIENCE_LOSS_CAP, PATIENCE_LOSS_PER_RACE * shortfall) * diff.patienceLossMult)));
             const fired = patience <= 0;
 
-            return {
+            const next: GameState = {
                 ...state,
                 teams,
                 drivers,
@@ -195,6 +196,13 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                 driverRecords,
                 phase: fired ? 'gameOver' : raceIndex >= CIRCUITS.length ? 'postSeason' : 'preRace',
             };
+            // Evento de decisión (junta/prensa/patrocinador) tras la carrera.
+            const playerBest = action.record.classification
+                .filter(r => r.teamId === state.playerTeamId && r.position !== null)
+                .reduce((m, r) => Math.min(m, r.position as number), Infinity);
+            next.pendingEvent = fired ? null
+                : (state.pendingEvent ?? generateDecisionEvent(state.season, state.raceIndex, next, Number.isFinite(playerBest) ? playerBest : null));
+            return next;
         }
 
         case 'TAKE_ENGINE': {
@@ -203,6 +211,32 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
             return {
                 ...state,
                 drivers: { ...state.drivers, [d.id]: { ...d, engine: fitNewEngine(d.engine) } },
+            };
+        }
+
+        case 'RESOLVE_EVENT': {
+            const ev = state.pendingEvent;
+            if (!ev) return state;
+            const choice = ev.choices[action.choiceIndex];
+            if (!choice) return state;
+            const player = state.teams[state.playerTeamId];
+            const teams = choice.budget
+                ? { ...state.teams, [player.id]: { ...player, budget: Math.round((player.budget + choice.budget) * 10) / 10 } }
+                : state.teams;
+            const drivers = choice.moraleAll
+                ? Object.fromEntries(Object.entries(state.drivers).map(([id, d]) =>
+                    [id, d.teamId === player.id ? { ...d, morale: Math.max(0, Math.min(100, d.morale + choice.moraleAll!)) } : d]))
+                : state.drivers;
+            const patience = choice.patience
+                ? Math.max(0, Math.min(100, state.board.patience + choice.patience))
+                : state.board.patience;
+            return {
+                ...state,
+                teams,
+                drivers,
+                board: { ...state.board, patience },
+                pendingEvent: null,
+                ledger: choice.budget ? [...state.ledger, { raceIndex: state.raceIndex, label: `Decisión: ${choice.label}`, amount: choice.budget }] : state.ledger,
             };
         }
 

@@ -35,6 +35,22 @@ export const Dashboard = () => {
                 </div>
             </div>
 
+            {game.pendingEvent && (
+                <Card accent="#ffd12e">
+                    <p className="text-[11px] font-bold uppercase tracking-widest text-pit-yellow mb-1">
+                        {game.pendingEvent.source === 'board' ? 'Junta directiva' : game.pendingEvent.source === 'press' ? 'Prensa' : 'Patrocinador'}
+                    </p>
+                    <p className="text-sm mb-3">{game.pendingEvent.prompt}</p>
+                    <div className="space-y-2">
+                        {game.pendingEvent.choices.map((c, i) => (
+                            <Button key={i} variant="ghost" size="block" onClick={() => dispatch({ type: 'RESOLVE_EVENT', choiceIndex: i })}>
+                                {c.label}
+                            </Button>
+                        ))}
+                    </div>
+                </Card>
+            )}
+
             {nextCircuit ? (
                 <Card hero>
                     <div className="flex items-center justify-between gap-4">
