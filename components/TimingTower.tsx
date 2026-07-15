@@ -52,7 +52,8 @@ export const TimingTower = ({ race, teams, drivers, playerTeamId }: {
                                 : car === leader ? <span className="text-gap-green font-semibold">Líder</span>
                                 : gap !== null ? formatGap(gap) : ''}
                         </span>
-                        <span className="w-14 flex justify-end">
+                        <span className="w-14 flex justify-end items-center gap-1">
+                            {!dnf && car.damage > 0 && <span className="text-danger text-[11px]" title="Ala dañada">⚠</span>}
                             {!dnf && <TireBadge compound={car.compound} age={car.tireAge} />}
                         </span>
                         <span className="w-10 text-right">

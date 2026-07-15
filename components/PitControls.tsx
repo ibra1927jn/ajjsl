@@ -50,6 +50,11 @@ export const PitControls = ({ race, playerTeamId, drivers, onQueuePit, onPaceMod
                                 <span className="text-danger text-xs font-semibold">Abandono</span>
                             ) : (
                                 <div className="space-y-2">
+                                    {car.damage > 0 && (
+                                        <div className="text-danger text-[11px] font-bold bg-danger/10 rounded-md px-2 py-1">
+                                            ⚠ Ala dañada · para en boxes para reparar (+8s)
+                                        </div>
+                                    )}
                                     {car.pendingPit ? (
                                         <div className="flex items-center gap-2">
                                             <span className="text-pit-yellow text-xs font-bold animate-pulse">

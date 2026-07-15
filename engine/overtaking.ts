@@ -1,7 +1,8 @@
 import { CarState, Circuit, Driver, RaceEvent } from '../types';
 import {
     CONTACT_ATTACKER_LOSS, CONTACT_DEFENDER_CHANCE, CONTACT_DEFENDER_LOSS, CONTACT_PENALTY_SEC,
-    DRS_OVERTAKE_ADD, DUEL_CONTACT_CHANCE, OVERTAKE_BASE, OVERTAKE_PACE_FACTOR, OVERTAKE_STUCK_GAP,
+    DAMAGE_CHANCE_ON_CONTACT, DRS_OVERTAKE_ADD, DUEL_CONTACT_CHANCE, FRONT_WING_PENALTY,
+    OVERTAKE_BASE, OVERTAKE_PACE_FACTOR, OVERTAKE_STUCK_GAP,
 } from '../data/constants';
 import { Rng } from './rng';
 
@@ -79,10 +80,20 @@ export function resolveOvertakes(
                         ahead.totalTime += CONTACT_DEFENDER_LOSS[0]
                             + rng.next() * (CONTACT_DEFENDER_LOSS[1] - CONTACT_DEFENDER_LOSS[0]);
                     }
+                    // Daño de ala: el atacante (y a veces el defensor) rompe el ala.
+                    let damaged = '';
+                    if (rng.chance(DAMAGE_CHANCE_ON_CONTACT)) {
+                        behind.damage = Math.max(behind.damage, FRONT_WING_PENALTY);
+                        damaged = ` ${attacker.shortCode} daña el ala.`;
+                    }
+                    if (rng.chance(DAMAGE_CHANCE_ON_CONTACT * 0.5)) {
+                        ahead.damage = Math.max(ahead.damage, FRONT_WING_PENALTY);
+                        damaged += ` ${defender.shortCode} daña el ala.`;
+                    }
                     events.push({
                         lap,
                         type: 'incident',
-                        message: `💥 ¡Contacto entre ${attacker.shortCode} y ${defender.shortCode}! ${CONTACT_PENALTY_SEC}s de sanción para ${attacker.shortCode}.`,
+                        message: `💥 ¡Contacto entre ${attacker.shortCode} y ${defender.shortCode}! ${CONTACT_PENALTY_SEC}s de sanción para ${attacker.shortCode}.${damaged}`,
                     });
                 }
             }

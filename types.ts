@@ -100,6 +100,7 @@ export interface CarState {
     pendingPit: Compound | null; // parada encolada para la próxima vuelta
     paceMode: PaceMode;
     penaltySec: number;          // penalizaciones acumuladas, se suman en meta
+    damage: number;              // daño de ala: s/vuelta hasta reparar en boxes
 }
 
 // Plan de la vuelta calculado en el sector 0 (transitorio, se reparte por sectores).
@@ -115,7 +116,7 @@ export interface LapStartInfo {
     penalty: Record<string, number>; // driverId → penaltySec al inicio de la vuelta
 }
 
-export type RaceEventType = 'overtake' | 'pit' | 'dnf' | 'safetyCar' | 'safetyCarEnd' | 'fastestLap' | 'info' | 'weather' | 'incident' | 'radio';
+export type RaceEventType = 'overtake' | 'pit' | 'dnf' | 'safetyCar' | 'safetyCarEnd' | 'fastestLap' | 'info' | 'weather' | 'incident' | 'radio' | 'damage';
 
 export interface RaceEvent {
     lap: number;

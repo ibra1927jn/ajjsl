@@ -12,6 +12,7 @@ const COLORS: Record<RaceEventType, string> = {
     weather: 'text-[#4aa8ff]',
     incident: 'text-[#f97316]',
     radio: 'text-text-main italic',
+    damage: 'text-danger',
 };
 
 export const EventFeed = ({ events }: { events: RaceEvent[] }) => {

@@ -1,8 +1,9 @@
 import { CarState, Circuit, Compound, Driver, LapPlanEntry, RaceEvent, RaceLength, RaceState, Sector, SessionKind, Team } from '../types';
 import {
     BASE_NOISE_SD, CLIFF_MULTIPLIER, COMPOUNDS, DEFAULT_SECTOR_SPLIT, DIRTY_AIR_PENALTY, DIRTY_AIR_RANGE,
-    FUEL_EFFECT, PIT_LOSS, PIT_LOSS_SD, RACE_FORM_SD, RACE_LENGTH_SCALE, SC_CHANCE_ON_DNF, SC_COMPRESS_GAP,
-    SC_LAP_FACTOR, SC_MAX_LAPS, SC_MIN_LAPS, SECTOR_INCIDENT_FRACTION, SECTOR_MICRO_SD,
+    DAMAGE_REPAIR_PIT_LOSS, FUEL_EFFECT, PIT_LOSS, PIT_LOSS_SD, RACE_FORM_SD, RACE_LENGTH_SCALE,
+    SC_CHANCE_ON_DNF, SC_COMPRESS_GAP, SC_LAP_FACTOR, SC_MAX_LAPS, SC_MIN_LAPS,
+    SECTOR_INCIDENT_FRACTION, SECTOR_MICRO_SD,
 } from '../data/constants';
 import { perfDelta } from './performance';
 import { QualiResult } from './qualifying';
@@ -73,6 +74,7 @@ export function createRaceState(
             pendingPit: null,
             paceMode: 'normal' as const,
             penaltySec: 0,
+            damage: 0,
         };
     });
     const kindLabel = opts.kind === 'sprint' ? 'Sprint' : 'Carrera';
@@ -132,6 +134,7 @@ function raceLapTime(
         + perfDelta(team, driver)
         + car.formOffset
         + comp.offset
+        + car.damage
         + (mods[car.teamId]?.setupLapDelta ?? 0)
         + PACE_MODES[car.paceMode].lapDelta
         + deg
@@ -280,6 +283,7 @@ export function advanceSector(
         // La pérdida de parada aterriza en el último sector (más barata bajo SC).
         if (s === 2 && car.pendingPit !== null && entry) {
             base += (state.phase === 'safetyCar' ? 0.6 : 1) * entry.pitLoss;
+            if (car.damage > 0) base += DAMAGE_REPAIR_PIT_LOSS; // reparar el ala cuesta más
         }
         base += rng.gaussian(0, SECTOR_MICRO_SD);
         car.totalTime += base;
@@ -293,14 +297,16 @@ export function advanceSector(
             car.lastLap = car.lapAccum;
             if (car.pendingPit !== null) {
                 const compound = car.pendingPit;
+                const repaired = car.damage > 0;
                 car.compound = compound;
                 car.tireAge = 0;
+                car.damage = 0; // la parada repara el ala
                 car.pitCount += 1;
                 car.pendingPit = null;
                 pittedThisSector.add(car.driverId);
                 newEvents.push({
                     lap, type: 'pit',
-                    message: `BOX: ${drivers[car.driverId].shortCode} para y monta ${COMPOUND_NAMES[compound]}.`,
+                    message: `BOX: ${drivers[car.driverId].shortCode} para y monta ${COMPOUND_NAMES[compound]}${repaired ? ' + repara ala' : ''}.`,
                 });
             }
         }

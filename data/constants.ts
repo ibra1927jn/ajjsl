@@ -99,6 +99,9 @@ export const CONTACT_ATTACKER_LOSS: [number, number] = [1, 3]; // s perdidos
 export const CONTACT_DEFENDER_CHANCE = 0.4;
 export const CONTACT_DEFENDER_LOSS: [number, number] = [1, 2];
 export const CONTACT_PENALTY_SEC = 5;     // penalización del causante en meta
+export const FRONT_WING_PENALTY = 1.2;    // s/vuelta con el ala dañada
+export const DAMAGE_REPAIR_PIT_LOSS = 8;  // s extra en la parada para reparar
+export const DAMAGE_CHANCE_ON_CONTACT = 0.5; // prob. de romper ala en un contacto
 
 // ----- Adelantamientos -----
 export const OVERTAKE_BASE = 0.5;        // probabilidad base de intento exitoso
