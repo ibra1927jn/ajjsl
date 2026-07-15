@@ -69,6 +69,7 @@ export const DIRTY_AIR_RANGE = 1.2;      // s de gap para sufrir aire sucio
 export const PIT_LOSS = 22;              // s perdidos por parada
 export const PIT_LOSS_SD = 0.8;
 export const MANDATORY_PIT_PENALTY = 10; // s añadidos en meta si no se paró
+export const TWO_COMPOUND_PENALTY = 15;  // s en meta si en seco no se usan 2 compuestos slick
 
 // ----- Práctica libre y setup -----
 export const SETUP_SLIDERS = [

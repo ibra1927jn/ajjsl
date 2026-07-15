@@ -1,5 +1,5 @@
 import { Driver, DriverResult, RaceResultRecord, RaceState, Team } from '../types';
-import { FASTEST_LAP_POINT, MANDATORY_PIT_PENALTY, POINTS_TABLE, PRIZE_OUTSIDE_TOP10, PRIZE_TABLE, SPRINT_POINTS_TABLE, WET_RACE_THRESHOLD } from '../data/constants';
+import { FASTEST_LAP_POINT, MANDATORY_PIT_PENALTY, POINTS_TABLE, PRIZE_OUTSIDE_TOP10, PRIZE_TABLE, SLICKS, SPRINT_POINTS_TABLE, TWO_COMPOUND_PENALTY, WET_RACE_THRESHOLD } from '../data/constants';
 
 // Clasificación final: aplica penalización por no parar, reparte puntos y vuelta rápida.
 export function finalizeRace(
@@ -11,10 +11,15 @@ export function finalizeRace(
     const running = state.cars.filter(c => c.status === 'running').map(c => ({ ...c }));
     const dnfs = state.cars.filter(c => c.status !== 'running');
 
-    // La parada obligatoria no aplica en carreras mojadas.
+    // La parada obligatoria y la regla de dos compuestos no aplican en mojado.
     const wetRace = Math.max(...state.weather.wetness) > WET_RACE_THRESHOLD;
     for (const car of running) {
         if (!wetRace && car.pitCount === 0) car.totalTime += MANDATORY_PIT_PENALTY;
+        // Regla de dos compuestos: en seco hay que usar 2 slicks distintos.
+        if (!wetRace) {
+            const distinctSlicks = new Set(car.compoundsUsed.filter(c => SLICKS.includes(c)));
+            if (distinctSlicks.size < 2) car.totalTime += TWO_COMPOUND_PENALTY;
+        }
         car.totalTime += car.penaltySec; // sanciones por contactos
     }
     running.sort((a, b) => a.totalTime - b.totalTime);

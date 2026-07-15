@@ -19,6 +19,17 @@ const numArg = (name: string, def: number) => {
     return i >= 0 && args[i + 1] ? Number(args[i + 1]) : def;
 };
 
+// El jugador no tiene UI en el harness: simulamos una parada real (un stop a un
+// compuesto distinto) para representar a un mánager que sí para en boxes.
+function strategizePlayer(race: RaceState): void {
+    const mid = Math.floor(race.totalLaps * 0.5);
+    if (race.lap !== mid) return;
+    for (const car of race.cars) {
+        if (car.teamId !== PLAYER || car.status !== 'running' || car.pendingPit || car.pitCount > 0) continue;
+        car.pendingPit = car.compound === 'medium' ? 'hard' : 'medium';
+    }
+}
+
 export function runRace(game: GameState, circuitId: string, seed: number, rainChanceOverride?: number) {
     const base = CIRCUITS.find(c => c.id === circuitId)!;
     const circuit = rainChanceOverride !== undefined ? { ...base, rainChance: rainChanceOverride } : base;
@@ -26,6 +37,7 @@ export function runRace(game: GameState, circuitId: string, seed: number, rainCh
     let race = createRaceState(grid, circuit, PLAYER, seed + 1);
     let guard = 0;
     while (race.phase !== 'finished' && guard++ < 1000) {
+        strategizePlayer(race);
         race = advanceLap(race, circuit, game.teams, game.drivers, PLAYER);
     }
     const rec = finalizeRace(race, 0, 2025, grid[0].driverId);
@@ -246,6 +258,7 @@ function careerCheck(seasons: number) {
             let race = createRaceState(grid, c, PLAYER, 4000 + races * 7);
             let guard = 0;
             while (race.phase !== 'finished' && guard++ < 1000) {
+                strategizePlayer(race);
                 race = advanceLap(race, c, g.teams, g.drivers, PLAYER);
             }
             g = gameReducer(g, { type: 'RACE_COMPLETED', record: finalizeRace(race, idx, g.season, grid[0].driverId) })!;

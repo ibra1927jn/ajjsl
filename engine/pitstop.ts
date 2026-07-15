@@ -1,11 +1,21 @@
 import { CarState, Circuit, Compound, RaceLength, RaceState } from '../types';
 import {
-    COMPOUNDS, CROSSOVER_JITTER, FROM_WET_WETNESS, RACE_LENGTH_SCALE, SC_FREE_STOP_AGE,
+    COMPOUNDS, CROSSOVER_JITTER, FROM_WET_WETNESS, RACE_LENGTH_SCALE, SC_FREE_STOP_AGE, SLICKS,
     TO_INTER_WETNESS, TO_SLICK_WETNESS, TO_WET_WETNESS,
     UNDERCUT_AGE_OFFSET, UNDERCUT_CHANCE, UNDERCUT_GAP, UNDERCUT_LIFE_FRAC,
 } from '../data/constants';
 import { isSlick } from './weather';
 import { Rng } from './rng';
+
+// Empuja a la IA a cumplir la regla de dos compuestos: si en seco el compuesto
+// natural repetiría el único slick usado, elige otro slick distinto.
+function twoCompoundNudge(car: CarState, natural: Compound, wetness: number): Compound {
+    if (wetness >= TO_INTER_WETNESS) return natural; // mojado: la regla no aplica
+    const used = new Set(car.compoundsUsed.filter(c => SLICKS.includes(c)));
+    if (used.size >= 2 || !used.has(natural)) return natural;
+    for (const alt of ['medium', 'hard', 'soft'] as Compound[]) if (!used.has(alt)) return alt;
+    return natural;
+}
 
 // La vida del neumático se basa en la distancia del GRAN PREMIO a la duración
 // elegida (no en las vueltas de la sesión: un sprint no desgasta más).
@@ -46,7 +56,7 @@ export function aiDecidePits(state: RaceState, circuit: Circuit, playerTeamId: s
                 && Math.abs(r.totalTime - car.totalTime) < UNDERCUT_GAP
                 && (r.pendingPit !== null || r.tireAge >= car.tireAge + UNDERCUT_AGE_OFFSET));
             if (rival && und.chance(UNDERCUT_CHANCE)) {
-                car.pendingPit = chooseCompound(lapsLeft, circuit, wetness, state.raceLength);
+                car.pendingPit = twoCompoundNudge(car, chooseCompound(lapsLeft, circuit, wetness, state.raceLength), wetness);
                 continue;
             }
         }
@@ -84,7 +94,7 @@ export function aiDecidePits(state: RaceState, circuit: Circuit, playerTeamId: s
         const scFreeStop = state.phase === 'safetyCar' && car.tireAge >= life * SC_FREE_STOP_AGE && car.pitCount === 0;
 
         if (wornOut || scFreeStop || mustTakeMandatory) {
-            car.pendingPit = chooseCompound(lapsLeft, circuit, wetness, state.raceLength);
+            car.pendingPit = twoCompoundNudge(car, chooseCompound(lapsLeft, circuit, wetness, state.raceLength), wetness);
         }
     }
 }

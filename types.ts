@@ -108,6 +108,7 @@ export interface CarState {
     attackSectors: number;       // sectores corridos en 'attack' (desgaste de motor)
     ers: number;                 // carga de batería 0-1
     ersMode: ErsMode;            // modo de despliegue de energía
+    compoundsUsed: Compound[];   // compuestos montados (para la regla de dos compuestos)
 }
 
 // Plan de la vuelta calculado en el sector 0 (transitorio, se reparte por sectores).

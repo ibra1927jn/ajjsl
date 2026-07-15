@@ -54,6 +54,11 @@ export const StrategyEngineer = ({ race, circuit, drivers, playerTeamId }: {
                                     <IconChevronRight size={12} className="shrink-0" /> {a.opportunity}
                                 </p>
                             )}
+                            {a.needsCompound && (
+                                <p className="flex items-center gap-1 text-[11px] text-weather-blue mt-1">
+                                    <IconWarning size={12} className="shrink-0" /> Regla: aún falta un 2º compuesto
+                                </p>
+                            )}
                         </div>
                     );
                 })}

@@ -111,6 +111,7 @@ export function createRaceState(
             attackSectors: 0,
             ers: 1,                       // batería llena en la salida (constante, sin rng)
             ersMode: 'balanced' as const,
+            compoundsUsed: [compound],    // el compuesto de salida cuenta para la regla
         };
     });
     const kindLabel = opts.kind === 'sprint' ? 'Sprint' : 'Carrera';
@@ -377,6 +378,7 @@ export function advanceSector(
                 car.damage = 0; // la parada repara el ala
                 car.pitCount += 1;
                 car.pendingPit = null;
+                car.compoundsUsed = [...car.compoundsUsed, compound]; // nuevo array (el clon es superficial)
                 pittedThisSector.add(car.driverId);
                 newEvents.push({
                     lap, type: 'pit',

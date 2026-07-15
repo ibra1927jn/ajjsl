@@ -1,5 +1,5 @@
 import { Circuit, Compound, RaceState } from '../types';
-import { SC_FREE_STOP_AGE } from '../data/constants';
+import { SC_FREE_STOP_AGE, SLICKS, WET_RACE_THRESHOLD } from '../data/constants';
 import { compoundLife } from './pitstop';
 
 // Consejo de estrategia por coche del jugador (puro, solo lectura — cero rng,
@@ -16,6 +16,7 @@ export interface StratAdvice {
     tone: 'green' | 'yellow' | 'red';    // color del consejo
     threat: string | null;              // rival cercano en gomas más frescas
     opportunity: string | null;         // rival cercano en gomas más viejas / parando
+    needsCompound: boolean;             // en seco, aún no ha usado 2 compuestos distintos
 }
 
 const GAP_NEAR = 3.0;      // s para considerar a un rival "cercano"
@@ -29,6 +30,7 @@ export function strategyAdvice(
 ): StratAdvice[] {
     const running = race.cars.filter(c => c.status === 'running');
     const lapsLeft = race.totalLaps - race.lap;
+    const dryRace = Math.max(...race.weather.wetness) <= WET_RACE_THRESHOLD;
 
     return race.cars
         .filter(c => c.teamId === playerTeamId && c.status === 'running')
@@ -62,6 +64,8 @@ export function strategyAdvice(
             else if (windowOpen) { headline = `Ventana abierta · ~${Math.max(0, Math.round(lapsToCliff))} v al cliff`; tone = 'yellow'; }
             else { headline = `Neumático OK · ~${Math.round(lapsToCliff)} v de margen`; tone = 'green'; }
 
-            return { driverId: car.driverId, compound: car.compound, tireAge: car.tireAge, life, lapsToCliff, windowOpen, boxNow, headline, tone, threat, opportunity };
+            const needsCompound = dryRace && new Set(car.compoundsUsed.filter(c => SLICKS.includes(c))).size < 2;
+
+            return { driverId: car.driverId, compound: car.compound, tireAge: car.tireAge, life, lapsToCliff, windowOpen, boxNow, headline, tone, threat, opportunity, needsCompound };
         });
 }
