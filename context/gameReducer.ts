@@ -1,4 +1,5 @@
-import { Difficulty, Driver, GameAction, GameState, StaffMember, Team } from '../types';
+import { Difficulty, Driver, GameAction, GameState, RaceLength, StaffMember, Team } from '../types';
+import { hydrateDriver } from '../engine/driverInit';
 import { TEAMS } from '../data/teams';
 import { DRIVERS } from '../data/drivers';
 import { CIRCUITS } from '../data/circuits';
@@ -25,7 +26,7 @@ import { SAVE_VERSION } from '../services/persistence';
 // Bonus de presupuesto por posición final en el mundial de constructores.
 const WCC_SEASON_BONUS = [40, 35, 30, 27, 24, 21, 18, 15, 12, 10];
 
-export function createNewGame(playerTeamId: string, difficulty: Difficulty = 'normal'): GameState {
+export function createNewGame(playerTeamId: string, difficulty: Difficulty = 'normal', raceLength: RaceLength = 'medium'): GameState {
     const { staff, byTeam } = initialStaffAssignment();
     const teams: Record<string, Team> = {};
     for (const t of TEAMS) {
@@ -33,7 +34,7 @@ export function createNewGame(playerTeamId: string, difficulty: Difficulty = 'no
     }
     teams[playerTeamId].budget = Math.round(teams[playerTeamId].budget * DIFFICULTY[difficulty].budgetMult * 10) / 10;
     const drivers: Record<string, Driver> = {};
-    for (const d of DRIVERS) drivers[d.id] = { ...d };
+    for (const d of DRIVERS) drivers[d.id] = hydrateDriver(d);
     const ranked = Object.values(teams).sort((a, b) => carPerformance(b.car) - carPerformance(a.car));
     const targetPos = Math.min(10, Math.max(1, ranked.findIndex(t => t.id === playerTeamId) + 1 + BOARD_TARGET_SLACK));
     return {
@@ -51,13 +52,16 @@ export function createNewGame(playerTeamId: string, difficulty: Difficulty = 'no
         difficulty,
         staff,
         history: [],
+        raceLength,
+        records: {},
+        driverRecords: {},
     };
 }
 
 export function gameReducer(state: GameState | null, action: GameAction): GameState | null {
     switch (action.type) {
         case 'NEW_GAME':
-            return createNewGame(action.playerTeamId, action.difficulty ?? 'normal');
+            return createNewGame(action.playerTeamId, action.difficulty ?? 'normal', action.raceLength ?? 'medium');
 
         case 'LOAD_GAME':
             return action.state;

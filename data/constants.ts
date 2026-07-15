@@ -148,6 +148,10 @@ export const AI_DEV_SPEND_FRACTION = 0.55;     // % de sus ingresos que la IA in
 export const UPGRADE_LEAD_RACES = 2;           // carreras que tarda una mejora en fabricarse
 export const DEV_COST_CAP = 60;                // $M máximos de desarrollo por temporada (todos)
 
+// ----- Motores -----
+export const ENGINE_POOL = 3;            // unidades de potencia por temporada sin penalización
+export const GRID_PENALTY_BACK = 20;     // exceder el pool = salir del fondo
+
 // ----- Dificultad -----
 export interface DifficultySpec {
     label: string;

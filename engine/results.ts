@@ -34,7 +34,12 @@ export function finalizeRace(
         });
     }
 
-    return { raceIndex, circuitId: state.circuitId, season, classification, polesitterId };
+    return {
+        raceIndex, circuitId: state.circuitId, season, classification, polesitterId,
+        fastestLapTime: state.fastestLap?.time,
+        fastestLapDriverId: state.fastestLap?.driverId,
+        ledLapsDriverId: classification[0]?.driverId, // aprox.: el ganador lideró
+    };
 }
 
 // Clasificación del sprint: puntos 8-7-...-1, sin vuelta rápida ni parada obligatoria.

@@ -1,7 +1,8 @@
 import { Driver } from '../types';
 
 // Parrilla 2025 + agentes libres. Stats 0-100.
-export const DRIVERS: Driver[] = [
+// age/morale/engine se inicializan en createNewGame (edades en data/driverAges.ts).
+export const DRIVERS: Omit<Driver, 'age' | 'morale' | 'engine'>[] = [
     // McLaren
     { id: 'norris', name: 'Lando Norris', shortCode: 'NOR', teamId: 'mclaren', pace: 93, racecraft: 88, consistency: 84, experience: 70, salary: 35, contractYears: 3 },
     { id: 'piastri', name: 'Oscar Piastri', shortCode: 'PIA', teamId: 'mclaren', pace: 91, racecraft: 88, consistency: 90, experience: 60, salary: 20, contractYears: 3 },

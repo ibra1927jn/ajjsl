@@ -37,6 +37,12 @@ export interface Team {
     staffIds: Record<StaffRole, string | null>;
 }
 
+export interface EngineAllocation {
+    used: number;               // unidades de potencia usadas esta temporada
+    poolSize: number;           // permitidas sin penalización (3)
+    gridPenaltyPending: number; // posiciones de sanción para la próxima carrera
+}
+
 export interface Driver {
     id: string;
     name: string;
@@ -48,6 +54,9 @@ export interface Driver {
     experience: number;     // 0-100
     salary: number;         // $M por temporada
     contractYears: number;
+    age: number;            // edad en años
+    morale: number;         // 0-100
+    engine: EngineAllocation;
 }
 
 export interface Circuit {
@@ -155,6 +164,9 @@ export interface RaceResultRecord {
     classification: DriverResult[]; // ordenado: clasificados primero, luego DNFs
     polesitterId: string;
     sprintClassification?: DriverResult[]; // solo en fines de semana sprint
+    fastestLapTime?: number;
+    fastestLapDriverId?: string;
+    ledLapsDriverId?: string; // piloto que lideró (aprox. ganador) — para misiones
 }
 
 export interface LedgerEntry {
@@ -166,6 +178,25 @@ export interface LedgerEntry {
 // ===== Estado global de partida =====
 
 export type GamePhase = 'preRace' | 'postSeason' | 'gameOver';
+export type RaceLength = 'short' | 'medium' | 'full';
+
+// Record de vuelta rápida por circuito (nombres denormalizados: persiste retiradas).
+export interface CircuitRecord {
+    driverName: string;
+    teamName: string;
+    time: number;
+    season: number;
+}
+
+// Estadísticas de carrera de un piloto (denormalizado, sobrevive a retiradas).
+export interface DriverCareer {
+    name: string;
+    wins: number;
+    poles: number;
+    podiums: number;
+    fastestLaps: number;
+    races: number;
+}
 
 export interface UpgradeOrder {
     stat: CarStatKey;
@@ -208,10 +239,13 @@ export interface GameState {
     difficulty: Difficulty;
     staff: Record<string, StaffMember>;
     history: SeasonRecord[];      // palmarés de temporadas terminadas
+    raceLength: RaceLength;
+    records: Record<string, CircuitRecord>;      // circuitId → record de vuelta
+    driverRecords: Record<string, DriverCareer>; // driverId → estadísticas de carrera
 }
 
 export type GameAction =
-    | { type: 'NEW_GAME'; playerTeamId: string; difficulty?: Difficulty }
+    | { type: 'NEW_GAME'; playerTeamId: string; difficulty?: Difficulty; raceLength?: RaceLength }
     | { type: 'LOAD_GAME'; state: GameState }
     | { type: 'RACE_COMPLETED'; record: RaceResultRecord }
     | { type: 'APPLY_UPGRADE'; stat: CarStatKey; points: number; cost: number }

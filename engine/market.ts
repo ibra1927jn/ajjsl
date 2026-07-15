@@ -5,6 +5,7 @@ import {
 } from '../data/constants';
 import { ROOKIE_FIRST_NAMES, ROOKIE_LAST_NAMES } from '../data/names';
 import { carPerformance } from './performance';
+import { freshEngine } from './driverInit';
 import { Rng } from './rng';
 
 export function signingFee(driver: Driver): number {
@@ -93,6 +94,9 @@ export function generateRookies(season: number, existing: Record<string, Driver>
             experience: 10 + rng.int(0, 15),
             salary: 1 + rng.int(0, 2) * 0.5,
             contractYears: 0,
+            age: 18 + rng.int(0, 4),
+            morale: 65,
+            engine: freshEngine(),
         });
     }
     return rookies;

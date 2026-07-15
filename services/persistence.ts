@@ -1,11 +1,51 @@
-import { GameState, Team } from '../types';
+import { CircuitRecord, DriverCareer, Driver, GameState, RaceResultRecord, Team } from '../types';
 import { carPerformance } from '../engine/performance';
+import { freshEngine } from '../engine/driverInit';
 import { BOARD_START_PATIENCE, BOARD_TARGET_SLACK } from '../data/constants';
+import { DEFAULT_AGE, DEFAULT_MORALE, DRIVER_AGES } from '../data/driverAges';
 import { initialStaffAssignment } from '../data/staff';
 import { clearLive } from './livePersistence';
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 const KEY = 'f1m_save';
+
+// Reconstruye records de vuelta y estadísticas de piloto desde los resultados
+// existentes (para que un save v3 a mitad de carrera conserve su historia).
+function buildRecordsFromResults(results: RaceResultRecord[], teams: GameState['teams'], drivers: GameState['drivers']) {
+    const records: Record<string, CircuitRecord> = {};
+    const driverRecords: Record<string, DriverCareer> = {};
+    const bump = (id: string, name: string, f: (c: DriverCareer) => void) => {
+        const c = driverRecords[id] ?? { name, wins: 0, poles: 0, podiums: 0, fastestLaps: 0, races: 0 };
+        f(c);
+        driverRecords[id] = c;
+    };
+    for (const r of results) {
+        for (const res of r.classification) {
+            const name = drivers[res.driverId]?.name ?? res.driverId;
+            bump(res.driverId, name, c => {
+                c.races += 1;
+                if (res.position === 1) c.wins += 1;
+                if (res.position !== null && res.position <= 3) c.podiums += 1;
+                if (res.fastestLap) c.fastestLaps += 1;
+            });
+        }
+        const pole = r.classification.find(c => c.driverId === r.polesitterId);
+        if (pole) bump(pole.driverId, drivers[pole.driverId]?.name ?? pole.driverId, c => { c.poles += 1; });
+        if (r.fastestLapTime && r.fastestLapDriverId) {
+            const cur = records[r.circuitId];
+            if (!cur || r.fastestLapTime < cur.time) {
+                const d = drivers[r.fastestLapDriverId];
+                records[r.circuitId] = {
+                    driverName: d?.name ?? r.fastestLapDriverId,
+                    teamName: d?.teamId ? teams[d.teamId]?.shortName ?? '' : '',
+                    time: r.fastestLapTime,
+                    season: r.season,
+                };
+            }
+        }
+    }
+    return { records, driverRecords };
+}
 
 // Migraciones: version → función que transforma el estado de esa versión a la siguiente.
 // Deben ser puramente aditivas (spread + defaults) para no perder datos del jugador.
@@ -43,6 +83,28 @@ const migrations: Record<number, (old: unknown) => unknown> = {
             difficulty: s.difficulty ?? 'normal',
             staff: s.staff ?? staff,
             history: s.history ?? [],
+        };
+    },
+    // v3 → v4: edad/moral/motor por piloto, duración, records e historia de pilotos.
+    3: (old) => {
+        const s = old as GameState;
+        const drivers: Record<string, Driver> = {};
+        for (const [id, d] of Object.entries(s.drivers)) {
+            drivers[id] = {
+                ...d,
+                age: d.age ?? DRIVER_AGES[id] ?? DEFAULT_AGE,
+                morale: d.morale ?? DEFAULT_MORALE,
+                engine: d.engine ?? freshEngine(),
+            };
+        }
+        const { records, driverRecords } = buildRecordsFromResults(s.results, s.teams, drivers);
+        return {
+            ...s,
+            saveVersion: 4,
+            drivers,
+            raceLength: s.raceLength ?? 'medium',
+            records: s.records ?? records,
+            driverRecords: s.driverRecords ?? driverRecords,
         };
     },
 };
