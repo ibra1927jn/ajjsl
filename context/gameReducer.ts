@@ -4,6 +4,7 @@ import { wearEngine, fitNewEngine } from '../engine/engines';
 import { ageAndProgress } from '../engine/progression';
 import { applyRaceMorale } from '../engine/morale';
 import { generateMissions, evaluateMissions } from '../engine/missions';
+import { applyRaceToRecords } from '../engine/records';
 import { TEAMS } from '../data/teams';
 import { DRIVERS } from '../data/drivers';
 import { CIRCUITS } from '../data/circuits';
@@ -150,6 +151,12 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                 }
             }
 
+            // Records de circuito y estadísticas de piloto.
+            const records = { ...state.records };
+            const driverRecords: Record<string, typeof state.driverRecords[string]> = {};
+            for (const [id, c] of Object.entries(state.driverRecords)) driverRecords[id] = { ...c };
+            applyRaceToRecords(records, driverRecords, record, drivers, teams);
+
             // La junta evalúa tras cada carrera contra el objetivo de constructores.
             // Periodo de gracia al inicio de temporada: los standings tempranos son ruido.
             const results = [...state.results, record];
@@ -175,6 +182,8 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                 raceIndex,
                 upgradeQueue: pending,
                 board: { ...state.board, patience },
+                records,
+                driverRecords,
                 phase: fired ? 'gameOver' : raceIndex >= CIRCUITS.length ? 'postSeason' : 'preRace',
             };
         }

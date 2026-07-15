@@ -1,6 +1,7 @@
 import { CircuitRecord, DriverCareer, Driver, GameState, RaceResultRecord, Team } from '../types';
 import { carPerformance } from '../engine/performance';
 import { freshEngine } from '../engine/driverInit';
+import { applyRaceToRecords } from '../engine/records';
 import { BOARD_START_PATIENCE, BOARD_TARGET_SLACK } from '../data/constants';
 import { DEFAULT_AGE, DEFAULT_MORALE, DRIVER_AGES } from '../data/driverAges';
 import { initialStaffAssignment } from '../data/staff';
@@ -14,36 +15,7 @@ const KEY = 'f1m_save';
 function buildRecordsFromResults(results: RaceResultRecord[], teams: GameState['teams'], drivers: GameState['drivers']) {
     const records: Record<string, CircuitRecord> = {};
     const driverRecords: Record<string, DriverCareer> = {};
-    const bump = (id: string, name: string, f: (c: DriverCareer) => void) => {
-        const c = driverRecords[id] ?? { name, wins: 0, poles: 0, podiums: 0, fastestLaps: 0, races: 0 };
-        f(c);
-        driverRecords[id] = c;
-    };
-    for (const r of results) {
-        for (const res of r.classification) {
-            const name = drivers[res.driverId]?.name ?? res.driverId;
-            bump(res.driverId, name, c => {
-                c.races += 1;
-                if (res.position === 1) c.wins += 1;
-                if (res.position !== null && res.position <= 3) c.podiums += 1;
-                if (res.fastestLap) c.fastestLaps += 1;
-            });
-        }
-        const pole = r.classification.find(c => c.driverId === r.polesitterId);
-        if (pole) bump(pole.driverId, drivers[pole.driverId]?.name ?? pole.driverId, c => { c.poles += 1; });
-        if (r.fastestLapTime && r.fastestLapDriverId) {
-            const cur = records[r.circuitId];
-            if (!cur || r.fastestLapTime < cur.time) {
-                const d = drivers[r.fastestLapDriverId];
-                records[r.circuitId] = {
-                    driverName: d?.name ?? r.fastestLapDriverId,
-                    teamName: d?.teamId ? teams[d.teamId]?.shortName ?? '' : '',
-                    time: r.fastestLapTime,
-                    season: r.season,
-                };
-            }
-        }
-    }
+    for (const r of results) applyRaceToRecords(records, driverRecords, r, drivers, teams);
     return { records, driverRecords };
 }
 
