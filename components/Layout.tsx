@@ -3,13 +3,14 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useGame } from '../context/GameContext';
 import { CIRCUITS } from '../data/circuits';
 import { money } from './ui';
+import { IconHome, IconTrophy, IconWrench, IconHelmet, IconWallet, IconSettings } from './icons';
 
 const NAV = [
-    { to: '/dashboard', icon: 'dashboard', label: 'Inicio' },
-    { to: '/standings', icon: 'leaderboard', label: 'Mundial' },
-    { to: '/development', icon: 'construction', label: 'Equipo' },
-    { to: '/market', icon: 'sports_motorsports', label: 'Pilotos' },
-    { to: '/finances', icon: 'payments', label: 'Finanzas' },
+    { to: '/dashboard', Icon: IconHome, label: 'Inicio' },
+    { to: '/standings', Icon: IconTrophy, label: 'Mundial' },
+    { to: '/development', Icon: IconWrench, label: 'Equipo' },
+    { to: '/market', Icon: IconHelmet, label: 'Pilotos' },
+    { to: '/finances', Icon: IconWallet, label: 'Finanzas' },
 ];
 
 const SettingsMenu = () => {
@@ -24,10 +25,10 @@ const SettingsMenu = () => {
         <div className="relative">
             <button
                 onClick={() => (open ? close() : setOpen(true))}
-                className="text-text-sub hover:text-text-main text-base leading-none"
+                className="text-text-sub hover:text-text-main"
                 aria-label="Ajustes"
             >
-                ⚙️
+                <IconSettings size={20} />
             </button>
             {open && (
                 <>
@@ -89,18 +90,16 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
             {game && !location.pathname.startsWith('/race') && (
                 <nav className="fixed bottom-0 left-0 right-0 bg-card-dark border-t border-border-dark z-40">
                     <div className="max-w-5xl mx-auto flex justify-around py-2">
-                        {NAV.map(item => {
-                            const active = location.pathname === item.to;
+                        {NAV.map(({ to, Icon, label }) => {
+                            const active = location.pathname === to;
                             return (
                                 <Link
-                                    key={item.to}
-                                    to={item.to}
+                                    key={to}
+                                    to={to}
                                     className={`flex flex-col items-center gap-0.5 min-w-[60px] text-[10px] font-medium transition-colors ${active ? 'text-f1-red' : 'text-text-sub hover:text-text-main'}`}
                                 >
-                                    <span className="material-symbols-outlined" style={active ? { fontVariationSettings: "'FILL' 1" } : undefined}>
-                                        {item.icon}
-                                    </span>
-                                    {item.label}
+                                    <Icon size={22} />
+                                    {label}
                                 </Link>
                             );
                         })}

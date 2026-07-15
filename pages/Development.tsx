@@ -8,12 +8,13 @@ import { upgradeCost } from '../engine/development';
 import { carPerformance } from '../engine/performance';
 import { freeStaff, staffEffects, staffSigningFee } from '../engine/staff';
 import { Badge, Button, Card, SectionTitle, StatBar, money } from '../components/ui';
+import { IconAir, IconEngine, IconChassis, IconShield } from '../components/icons';
 
-const STATS: { key: CarStatKey; label: string; desc: string; icon: string }[] = [
-    { key: 'aero', label: 'Aerodinámica', desc: 'Carga y eficiencia. El área con más peso en el ritmo.', icon: 'air' },
-    { key: 'engine', label: 'Motor', desc: 'Potencia en rectas y salida de curva.', icon: 'bolt' },
-    { key: 'chassis', label: 'Chasis', desc: 'Equilibrio mecánico y paso por curva lenta.', icon: 'settings' },
-    { key: 'reliability', label: 'Fiabilidad', desc: 'Menos averías y abandonos. Más barata de mejorar.', icon: 'build_circle' },
+const STATS: { key: CarStatKey; label: string; desc: string; Icon: React.FC<{ size?: number; className?: string }> }[] = [
+    { key: 'aero', label: 'Aerodinámica', desc: 'Carga y eficiencia. El área con más peso en el ritmo.', Icon: IconAir },
+    { key: 'engine', label: 'Motor', desc: 'Potencia en rectas y salida de curva.', Icon: IconEngine },
+    { key: 'chassis', label: 'Chasis', desc: 'Equilibrio mecánico y paso por curva lenta.', Icon: IconChassis },
+    { key: 'reliability', label: 'Fiabilidad', desc: 'Menos averías y abandonos. Más barata de mejorar.', Icon: IconShield },
 ];
 
 export const Development = () => {
@@ -71,7 +72,7 @@ export const Development = () => {
             </Card>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {STATS.map(({ key, label, desc, icon }) => {
+                {STATS.map(({ key, label, desc, Icon }) => {
                     const level = player.car[key];
                     const queued = game.upgradeQueue.filter(o => o.stat === key).reduce((s, o) => s + o.points, 0);
                     const cost = Math.round(upgradeCost(key, level + queued) * (1 - fx.devDiscount) * 10) / 10;
@@ -81,7 +82,7 @@ export const Development = () => {
                     return (
                         <Card key={key}>
                             <div className="flex items-center gap-2 mb-2">
-                                <span className="material-symbols-outlined text-f1-red">{icon}</span>
+                                <span className="text-f1-red"><Icon size={20} /></span>
                                 <span className="font-bold">{label}</span>
                             </div>
                             <StatBar label="" value={level} color={key === 'reliability' ? '#00d26a' : player.color} />
