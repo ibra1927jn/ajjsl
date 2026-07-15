@@ -4,6 +4,7 @@ import { useActiveGame } from '../context/GameContext';
 import { CIRCUITS } from '../data/circuits';
 import { carPerformance } from '../engine/performance';
 import { computeDriverStandings, computeTeamStandings } from '../engine/season';
+import { generateMissions } from '../engine/missions';
 import { Button, Card, SectionTitle, StatBar, money } from '../components/ui';
 
 export const Dashboard = () => {
@@ -11,6 +12,7 @@ export const Dashboard = () => {
     const navigate = useNavigate();
     const player = game.teams[game.playerTeamId];
     const nextCircuit = game.phase === 'preRace' ? CIRCUITS[game.raceIndex] : null;
+    const missions = nextCircuit ? generateMissions(game.season, game.raceIndex, game.playerTeamId, game.teams) : [];
 
     const teamStandings = computeTeamStandings(game.results);
     const driverStandings = computeDriverStandings(game.results);
@@ -45,6 +47,19 @@ export const Dashboard = () => {
                             Ir al circuito →
                         </Button>
                     </div>
+                    {missions.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-border-dark">
+                            <p className="text-[11px] text-text-sub uppercase font-bold tracking-wider mb-1">🎯 Misiones de patrocinador</p>
+                            <div className="space-y-1">
+                                {missions.map((m, i) => (
+                                    <div key={i} className="flex justify-between text-xs">
+                                        <span>{m.label}</span>
+                                        <span className="text-gap-green font-semibold tabular-nums">+{money(m.reward)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </Card>
             ) : (
                 <Card className="border-fastest-purple/40">

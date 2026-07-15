@@ -3,6 +3,7 @@ import { hydrateDriver } from '../engine/driverInit';
 import { wearEngine, fitNewEngine } from '../engine/engines';
 import { ageAndProgress } from '../engine/progression';
 import { applyRaceMorale } from '../engine/morale';
+import { generateMissions, evaluateMissions } from '../engine/missions';
 import { TEAMS } from '../data/teams';
 import { DRIVERS } from '../data/drivers';
 import { CIRCUITS } from '../data/circuits';
@@ -138,6 +139,16 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
             }
             // Moral: se mueve por resultado y por batir (o no) al compañero.
             applyRaceMorale(drivers, record);
+
+            // Misiones de patrocinador de esta carrera.
+            const missions = generateMissions(state.season, record.raceIndex, state.playerTeamId, state.teams);
+            const { completed, payout } = evaluateMissions(missions, record, state.playerTeamId);
+            if (payout > 0) {
+                teams[state.playerTeamId].budget = Math.round((teams[state.playerTeamId].budget + payout) * 10) / 10;
+                for (const m of completed) {
+                    ledger.push({ raceIndex, label: `Misión: ${m.label}`, amount: m.reward });
+                }
+            }
 
             // La junta evalúa tras cada carrera contra el objetivo de constructores.
             // Periodo de gracia al inicio de temporada: los standings tempranos son ruido.
