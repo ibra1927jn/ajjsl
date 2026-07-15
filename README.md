@@ -26,6 +26,7 @@ Juego de mánager de Fórmula 1 en el navegador, inspirado en F1 Manager de Fron
 - **Fin de semana auténtico** (v6): **clasificación por eliminación Q1/Q2/Q3** con tensión de corte, y **regla de dos compuestos** en seco.
 - **Paddock vivo** (v6): **rasgos de piloto** (mago de la lluvia, cuida-ruedas, agresivo, temperamental…) que cambian su conducta en pista y clasificación; y **eventos de decisión** de junta, prensa y patrocinadores con consecuencias en presupuesto, paciencia y moral.
 - **Ingeniería de equipo** (v6): **I+D con riesgo de correlación** (las mejoras entregan puntos con varianza: pueden fallar o superar lo previsto) e **instalaciones** (túnel de viento, simulador, fábrica) que subes de nivel para reducir ese riesgo, mejorar la clasificación y acelerar las paradas y la fabricación.
+- **Consolidación y realismo** (v6.5): pasada de revisión — carreras más realistas (menos adelantamientos fantasma, sin paradas absurdas en sprint, menos abandonos, mundial más reñido), un **glosario "Cómo se juega"** y textos que explican el ERS, eventos de decisión con **consecuencias visibles**, y **batería/DRS de todos los coches en la torre de tiempos**. Las instalaciones ahora tienen efecto real.
 
 ## Ejecutar en local
 
