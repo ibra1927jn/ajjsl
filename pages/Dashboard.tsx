@@ -7,6 +7,7 @@ import { computeDriverStandings, computeTeamStandings } from '../engine/season';
 import { generateMissions } from '../engine/missions';
 import { Button, Card, SectionTitle, StatBar, money, triColor } from '../components/ui';
 import { IconChevronRight } from '../components/icons';
+import { TraitBadges } from '../components/TraitBadges';
 
 export const Dashboard = () => {
     const { game, dispatch } = useActiveGame();
@@ -133,12 +134,13 @@ export const Dashboard = () => {
                             const pos = driverStandings.findIndex(s => s.driverId === id);
                             return (
                                 <div key={id} className="flex items-center justify-between">
-                                    <div>
+                                    <div className="min-w-0">
                                         <p className="font-semibold text-sm">{d.name}</p>
                                         <p className="text-xs text-text-sub">
                                             Ritmo {d.pace} · {money(d.salary)}/año
                                             {standing && pos >= 0 && ` · P${pos + 1} (${standing.points} pts)`}
                                         </p>
+                                        {d.traits.length > 0 && <TraitBadges traits={d.traits} className="mt-1" />}
                                     </div>
                                     <span className="font-display font-bold text-lg tracking-wide text-text-sub">{d.shortCode}</span>
                                 </div>

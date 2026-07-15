@@ -3,6 +3,7 @@ import { useActiveGame } from '../context/GameContext';
 import { Driver } from '../types';
 import { buyoutFee, freeAgents, signingFee } from '../engine/market';
 import { Badge, Button, Card, SectionTitle, StatBar, money } from '../components/ui';
+import { TraitBadges } from '../components/TraitBadges';
 
 const DriverCard = ({ driver, sub, footer }: { driver: Driver; sub?: string; footer?: React.ReactNode }) => (
     <Card>
@@ -10,6 +11,7 @@ const DriverCard = ({ driver, sub, footer }: { driver: Driver; sub?: string; foo
             <span className="font-bold">{driver.name}</span>
             <Badge>{driver.shortCode}</Badge>
         </div>
+        {driver.traits.length > 0 && <TraitBadges traits={driver.traits} className="mb-2" />}
         {sub && <p className="text-xs text-text-sub mb-2">{sub}</p>}
         <div className="space-y-1.5 mb-2">
             <StatBar label="Ritmo" value={driver.pace} />
