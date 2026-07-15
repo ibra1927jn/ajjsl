@@ -5,7 +5,8 @@ import { CIRCUITS } from '../data/circuits';
 import { carPerformance } from '../engine/performance';
 import { computeDriverStandings, computeTeamStandings } from '../engine/season';
 import { generateMissions } from '../engine/missions';
-import { Button, Card, SectionTitle, StatBar, money } from '../components/ui';
+import { Button, Card, SectionTitle, StatBar, money, triColor } from '../components/ui';
+import { IconChevronRight } from '../components/icons';
 
 export const Dashboard = () => {
     const { game, dispatch } = useActiveGame();
@@ -25,8 +26,8 @@ export const Dashboard = () => {
             <div className="flex items-center gap-3">
                 <span className="w-2 h-10 rounded-full" style={{ background: player.color }} />
                 <div>
-                    <h1 className="text-xl font-extrabold">{player.name}</h1>
-                    <p className="text-sm text-text-sub">
+                    <h1 className="font-display text-2xl font-bold leading-none">{player.name}</h1>
+                    <p className="text-sm text-text-sub mt-0.5">
                         Temporada {game.season}
                         {game.results.length > 0 && playerPos >= 0 && ` · P${playerPos + 1} en constructores (${teamStandings[playerPos].points} pts)`}
                     </p>
@@ -34,17 +35,17 @@ export const Dashboard = () => {
             </div>
 
             {nextCircuit ? (
-                <Card className="border-f1-red/40">
+                <Card hero>
                     <div className="flex items-center justify-between gap-4">
                         <div>
-                            <p className="text-xs text-text-sub uppercase tracking-wider font-bold mb-1">
+                            <p className="text-xs text-text-sub uppercase tracking-widest font-bold mb-1">
                                 Ronda {game.raceIndex + 1} de {CIRCUITS.length}
                             </p>
-                            <p className="text-lg font-extrabold">{nextCircuit.name}</p>
-                            <p className="text-sm text-text-sub">{nextCircuit.country}</p>
+                            <p className="font-display text-2xl font-bold leading-none">{nextCircuit.name}</p>
+                            <p className="text-sm text-text-sub mt-1">{nextCircuit.country}</p>
                         </div>
                         <Button onClick={() => navigate('/race')} className="shrink-0">
-                            Ir al circuito →
+                            Ir al circuito <IconChevronRight size={16} />
                         </Button>
                     </div>
                     {missions.length > 0 && (
@@ -86,14 +87,14 @@ export const Dashboard = () => {
                             )}
                         </p>
                     </div>
-                    <span className={`text-lg font-extrabold tabular-nums ${game.board.patience > 40 ? 'text-gap-green' : game.board.patience > 20 ? 'text-pit-yellow' : 'text-danger'}`}>
+                    <span className="font-display text-2xl font-bold tabular-nums" style={{ color: triColor(game.board.patience, 41, 21) }}>
                         {game.board.patience}
                     </span>
                 </div>
                 <div className="h-2 bg-card-darker rounded-full overflow-hidden">
                     <div className="h-full rounded-full transition-all" style={{
                         width: `${game.board.patience}%`,
-                        background: game.board.patience > 40 ? '#00d26a' : game.board.patience > 20 ? '#ffd12e' : '#ff4d4d',
+                        background: triColor(game.board.patience, 41, 21),
                     }} />
                 </div>
                 <p className="text-[11px] text-text-sub mt-1">Paciencia de la junta: si llega a 0, estás despedido.</p>
@@ -139,7 +140,7 @@ export const Dashboard = () => {
                                             {standing && pos >= 0 && ` · P${pos + 1} (${standing.points} pts)`}
                                         </p>
                                     </div>
-                                    <span className="font-extrabold text-text-sub">{d.shortCode}</span>
+                                    <span className="font-display font-bold text-lg tracking-wide text-text-sub">{d.shortCode}</span>
                                 </div>
                             );
                         })}

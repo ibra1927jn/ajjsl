@@ -29,18 +29,18 @@ export const Finances = () => {
             <SectionTitle>Finanzas</SectionTitle>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Card>
-                    <p className="text-xs text-text-sub uppercase font-bold tracking-wider mb-1">Presupuesto</p>
-                    <p className="text-2xl font-extrabold text-gap-green tabular-nums">{money(player.budget)}</p>
+                <Card accent="#22e07a">
+                    <p className="text-xs text-text-sub uppercase font-bold tracking-widest mb-1">Presupuesto</p>
+                    <p className="font-display text-3xl font-bold text-gap-green tabular-nums leading-none">{money(player.budget)}</p>
                 </Card>
-                <Card>
-                    <p className="text-xs text-text-sub uppercase font-bold tracking-wider mb-1">Patrocinio / carrera</p>
-                    <p className="text-2xl font-extrabold tabular-nums">{money(SPONSOR_PER_RACE[player.sponsorTier])}</p>
-                    <p className="text-xs text-text-sub">Nivel de patrocinador {player.sponsorTier}</p>
+                <Card accent="#4aa8ff">
+                    <p className="text-xs text-text-sub uppercase font-bold tracking-widest mb-1">Patrocinio / carrera</p>
+                    <p className="font-display text-3xl font-bold tabular-nums leading-none">{money(SPONSOR_PER_RACE[player.sponsorTier])}</p>
+                    <p className="text-xs text-text-sub mt-1">Nivel de patrocinador {player.sponsorTier}</p>
                 </Card>
-                <Card>
-                    <p className="text-xs text-text-sub uppercase font-bold tracking-wider mb-1">Salarios / carrera</p>
-                    <p className="text-2xl font-extrabold text-danger tabular-nums">{money(-salaries)}</p>
+                <Card accent="#ff4d4d">
+                    <p className="text-xs text-text-sub uppercase font-bold tracking-widest mb-1">Salarios / carrera</p>
+                    <p className="font-display text-3xl font-bold text-danger tabular-nums leading-none">{money(-salaries)}</p>
                 </Card>
             </div>
 

@@ -19,7 +19,7 @@ import { TimingTower } from '../components/TimingTower';
 import { EventFeed } from '../components/EventFeed';
 import { PitControls } from '../components/PitControls';
 import { TrackMap } from '../components/TrackMap';
-import { Button, Card, SectionTitle, StatusPill, TeamStripe, formatLapTime, money } from '../components/ui';
+import { Button, Card, SectionTitle, StatusPill, formatLapTime, money } from '../components/ui';
 import { IconPlay, IconPause } from '../components/icons';
 
 type Step = 'practice' | 'quali' | 'sprint' | 'sprintResults' | 'race' | 'results';
@@ -220,12 +220,13 @@ const SprintResults = ({ classification, teams, drivers, playerTeamId, onContinu
         <div className="bg-card-darker rounded-2xl border border-border-dark overflow-hidden">
             {classification.map(r => (
                 <div key={r.driverId}
-                    className={`flex items-center gap-2 px-3 py-1.5 text-sm border-b border-border-dark/50 last:border-0 ${r.teamId === playerTeamId ? 'bg-f1-red/10' : ''} ${r.dnf ? 'opacity-40' : ''}`}>
-                    <span className="w-6 text-right font-bold tabular-nums text-text-sub">{r.position ?? '—'}</span>
-                    <TeamStripe color={teams[r.teamId].color} />
+                    className={`relative flex items-center gap-2 pl-3 pr-3 py-1.5 text-sm border-b border-border-dark/40 last:border-0 ${r.teamId === playerTeamId ? 'bg-f1-red/10' : ''} ${r.dnf ? 'opacity-40' : ''}`}>
+                    {r.teamId === playerTeamId && <span className="absolute left-0 top-0 bottom-0 w-0.5 bg-f1-red" />}
+                    <span className={`w-6 text-center font-display font-bold text-base tabular-nums ${r.position === 1 ? 'text-pit-yellow' : 'text-text-main'}`}>{r.position ?? '—'}</span>
+                    <span className="w-1 h-6 rounded-full shrink-0" style={{ background: teams[r.teamId].color }} />
                     <span className="flex-1 font-semibold truncate">{drivers[r.driverId].name}</span>
-                    {r.dnf ? <span className="text-danger text-xs font-semibold w-12 text-right">DNF</span>
-                        : <span className="w-12 text-right font-bold tabular-nums">{r.points > 0 ? `+${r.points}` : ''}</span>}
+                    {r.dnf ? <span className="font-display text-danger text-xs font-bold w-12 text-right">DNF</span>
+                        : <span className="w-12 text-right font-display font-bold text-lg tabular-nums">{r.points > 0 ? `+${r.points}` : ''}</span>}
                 </div>
             ))}
         </div>
@@ -345,13 +346,14 @@ const QualiScreen = ({ grid, teams, drivers, playerTeamId, forecast, setupQualit
         <div className="bg-card-darker rounded-2xl border border-border-dark overflow-hidden">
             {grid.map((q, i) => (
                 <div key={q.driverId}
-                    className={`flex items-center gap-2 px-3 py-1.5 text-sm border-b border-border-dark/50 last:border-0 ${q.teamId === playerTeamId ? 'bg-f1-red/10' : ''}`}>
-                    <span className="w-6 text-right font-bold tabular-nums text-text-sub">{i + 1}</span>
-                    <TeamStripe color={teams[q.teamId].color} />
-                    <span className="w-12 font-bold">{drivers[q.driverId].shortCode}</span>
+                    className={`relative flex items-center gap-2 pl-3 pr-3 py-1.5 text-sm border-b border-border-dark/40 last:border-0 ${q.teamId === playerTeamId ? 'bg-f1-red/10' : ''}`}>
+                    {q.teamId === playerTeamId && <span className="absolute left-0 top-0 bottom-0 w-0.5 bg-f1-red" />}
+                    <span className={`w-6 text-center font-display font-bold text-base tabular-nums ${i === 0 ? 'text-pit-yellow' : 'text-text-main'}`}>{i + 1}</span>
+                    <span className="w-1 h-6 rounded-full shrink-0" style={{ background: teams[q.teamId].color }} />
+                    <span className="w-11 font-display font-bold text-base tracking-wide">{drivers[q.driverId].shortCode}</span>
                     <span className="flex-1 text-text-sub text-xs truncate">{teams[q.teamId].shortName}</span>
-                    <span className="tabular-nums text-xs">{formatLapTime(q.time)}</span>
-                    <span className="w-16 text-right tabular-nums text-xs text-text-sub">
+                    <span className="font-display tabular-nums text-xs">{formatLapTime(q.time)}</span>
+                    <span className="w-16 text-right font-display tabular-nums text-xs text-text-sub">
                         {i === 0 ? 'POLE' : `+${(q.time - grid[0].time).toFixed(3)}`}
                     </span>
                 </div>
@@ -482,16 +484,17 @@ const ResultsScreen = ({ record, teams, drivers, playerTeamId, onContinue }: {
             <div className="bg-card-darker rounded-2xl border border-border-dark overflow-hidden">
                 {record.classification.map(r => (
                     <div key={r.driverId}
-                        className={`flex items-center gap-2 px-3 py-1.5 text-sm border-b border-border-dark/50 last:border-0 ${r.teamId === playerTeamId ? 'bg-f1-red/10' : ''} ${r.dnf ? 'opacity-40' : ''}`}>
-                        <span className="w-6 text-right font-bold tabular-nums text-text-sub">{r.position ?? '—'}</span>
-                        <TeamStripe color={teams[r.teamId].color} />
+                        className={`relative flex items-center gap-2 pl-3 pr-3 py-1.5 text-sm border-b border-border-dark/40 last:border-0 ${r.teamId === playerTeamId ? 'bg-f1-red/10' : ''} ${r.dnf ? 'opacity-40' : ''}`}>
+                        {r.teamId === playerTeamId && <span className="absolute left-0 top-0 bottom-0 w-0.5 bg-f1-red" />}
+                        <span className={`w-6 text-center font-display font-bold text-base tabular-nums ${r.position === 1 ? 'text-pit-yellow' : 'text-text-main'}`}>{r.position ?? '—'}</span>
+                        <span className="w-1 h-6 rounded-full shrink-0" style={{ background: teams[r.teamId].color }} />
                         <span className="flex-1 font-semibold truncate">
                             {drivers[r.driverId].name}
-                            {r.fastestLap && <span className="ml-1 text-fastest-purple text-xs font-bold">VR</span>}
+                            {r.fastestLap && <span className="ml-1 font-display text-fastest-purple text-xs font-bold">VR</span>}
                         </span>
                         <span className="text-xs text-text-sub hidden sm:block">{teams[r.teamId].shortName}</span>
-                        {r.dnf ? <span className="text-danger text-xs font-semibold w-12 text-right">DNF</span>
-                            : <span className="w-12 text-right font-bold tabular-nums">{r.points > 0 ? `+${r.points}` : ''}</span>}
+                        {r.dnf ? <span className="font-display text-danger text-xs font-bold w-12 text-right">DNF</span>
+                            : <span className="w-12 text-right font-display font-bold text-lg tabular-nums">{r.points > 0 ? `+${r.points}` : ''}</span>}
                     </div>
                 ))}
             </div>
