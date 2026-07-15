@@ -2,7 +2,7 @@ import { CarState, Circuit, Driver, RaceEvent } from '../types';
 import {
     CONTACT_ATTACKER_LOSS, CONTACT_DEFENDER_CHANCE, CONTACT_DEFENDER_LOSS, CONTACT_PENALTY_SEC,
     DAMAGE_CHANCE_ON_CONTACT, DRS_OVERTAKE_ADD, DUEL_CONTACT_CHANCE, ERS_OVERTAKE_ADD, FRONT_WING_PENALTY,
-    OVERTAKE_BASE, OVERTAKE_PACE_FACTOR, OVERTAKE_STUCK_GAP,
+    OVERTAKE_BASE, OVERTAKE_PACE_FACTOR, OVERTAKE_STUCK_GAP, TRAIT_AGGRO_OVERTAKE_ADD, TRAIT_HOTHEAD_CONTACT_ADD,
 } from '../data/constants';
 import { Rng } from './rng';
 
@@ -56,7 +56,8 @@ export function resolveOvertakes(
                     * racecraftFactor
                     * (1 + OVERTAKE_PACE_FACTOR * Math.min(paceDelta, 2))
                 + (drsSet.has(behind.driverId) ? DRS_OVERTAKE_ADD : 0)
-                + (ersSet.has(behind.driverId) ? ERS_OVERTAKE_ADD : 0));
+                + (ersSet.has(behind.driverId) ? ERS_OVERTAKE_ADD : 0)
+                + (attacker.traits.includes('aggressive') ? TRAIT_AGGRO_OVERTAKE_ADD : 0));
 
             if (rng.chance(p)) {
                 order[i - 1] = behind;
@@ -72,7 +73,9 @@ export function resolveOvertakes(
                 // Falla el intento: se queda pegado detrás.
                 behind.totalTime = ahead.totalTime + OVERTAKE_STUCK_GAP;
                 // Duelo que acaba mal: contacto con pérdida de tiempo y sanción al causante.
-                if (rng.chance(DUEL_CONTACT_CHANCE)) {
+                // Los cabezas calientes (atacante o defensor) elevan el riesgo.
+                const hotHead = attacker.traits.includes('hotHead') || drivers[ahead.driverId].traits.includes('hotHead');
+                if (rng.chance(DUEL_CONTACT_CHANCE + (hotHead ? TRAIT_HOTHEAD_CONTACT_ADD : 0))) {
                     const defender = drivers[ahead.driverId];
                     const attackerLoss = CONTACT_ATTACKER_LOSS[0]
                         + rng.next() * (CONTACT_ATTACKER_LOSS[1] - CONTACT_ATTACKER_LOSS[0]);

@@ -17,6 +17,7 @@ import { collectRadio } from './radio';
 import { DRS_LAP_GAIN, DRS_RANGE, PACE_MODES, TEAM_ORDER_CUSHION, TO_INTER_WETNESS, TO_WET_WETNESS, WET_NOISE_FACTOR } from '../data/constants';
 import { ERS_ATTACK_GAP, ERS_LOW_CHARGE, ERS_MIN_DEPLOY, ERS_MODES } from '../data/constants';
 import { AI_CHASE_GAP, AI_CLEAN_AIR_GAP, AI_CONSERVE_LIFE, AI_THREAT_GAP } from '../data/constants';
+import { TRAIT_TYRE_DEG_MULT, TRAIT_WET_NOISE_MULT } from '../data/constants';
 import { ErsMode, PaceMode } from '../types';
 import { Rng } from './rng';
 
@@ -161,11 +162,13 @@ function raceLapTime(
 
     const life = compoundLife(car.compound, circuit, raceLength);
     const degRate = comp.degPerLap * circuit.tireStress;
-    const deg = car.tireAge <= life
+    const degTraitMult = driver.traits.includes('tyreWhisperer') ? TRAIT_TYRE_DEG_MULT : 1; // cuida-ruedas
+    const deg = (car.tireAge <= life
         ? degRate * car.tireAge
-        : degRate * life + degRate * CLIFF_MULTIPLIER * (car.tireAge - life);
+        : degRate * life + degRate * CLIFF_MULTIPLIER * (car.tireAge - life)) * degTraitMult;
 
-    const noiseSd = BASE_NOISE_SD * (1.6 - driver.consistency / 100) * (1 + WET_NOISE_FACTOR * wetness);
+    const wetNoiseMult = driver.traits.includes('wetMaster') ? TRAIT_WET_NOISE_MULT : 1; // mago de la lluvia
+    const noiseSd = BASE_NOISE_SD * (1.6 - driver.consistency / 100) * (1 + WET_NOISE_FACTOR * wetness * wetNoiseMult);
     const dirtyAir = gapAhead !== null && gapAhead < DIRTY_AIR_RANGE ? DIRTY_AIR_PENALTY : 0;
 
     return circuit.baseLapSec

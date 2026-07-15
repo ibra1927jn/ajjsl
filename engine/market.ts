@@ -4,6 +4,7 @@ import {
     ROOKIES_PER_SEASON, SIGNING_FEE_FACTOR,
 } from '../data/constants';
 import { ROOKIE_FIRST_NAMES, ROOKIE_LAST_NAMES } from '../data/names';
+import { ALL_TRAITS } from '../data/driverTraits';
 import { carPerformance } from './performance';
 import { freshEngine } from './driverInit';
 import { Rng } from './rng';
@@ -97,6 +98,7 @@ export function generateRookies(season: number, existing: Record<string, Driver>
             age: 18 + rng.int(0, 4),
             morale: 65,
             engine: freshEngine(),
+            traits: rng.chance(0.6) ? [rng.pick(ALL_TRAITS)] : [], // 0-1 rasgo
         });
     }
     return rookies;

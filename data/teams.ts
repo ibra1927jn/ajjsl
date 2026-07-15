@@ -2,7 +2,7 @@ import { Team } from '../types';
 
 // Stats sembrados según la forma de inicio de 2025.
 // devSpendSeason y staffIds se inicializan en createNewGame.
-export const TEAMS: Omit<Team, 'devSpendSeason' | 'staffIds'>[] = [
+export const TEAMS: Omit<Team, 'devSpendSeason' | 'staffIds' | 'facilities'>[] = [
     {
         id: 'mclaren', name: 'McLaren F1 Team', shortName: 'McLaren', color: '#FF8000',
         car: { aero: 90, engine: 87, chassis: 88, reliability: 90 },

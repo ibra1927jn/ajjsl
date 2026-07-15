@@ -35,6 +35,15 @@ export interface Team {
     driverIds: string[];    // exactamente 2
     devSpendSeason: number; // $M gastados en desarrollo esta temporada (cost cap)
     staffIds: Record<StaffRole, string | null>;
+    facilities: Facilities;  // instalaciones (túnel de viento, simulador, fábrica)
+}
+
+// Instalaciones del equipo, niveles 1-5. Suben con inversión y mejoran el
+// desarrollo (menos riesgo de correlación), la clasificación y las paradas.
+export interface Facilities {
+    windTunnel: number; // fiabilidad del desarrollo (menos varianza)
+    simulator: number;  // menos ruido en clasificación / mejor setup
+    factory: number;    // paradas más rápidas y fabricación más ágil
 }
 
 export interface EngineAllocation {
@@ -43,6 +52,15 @@ export interface EngineAllocation {
     gridPenaltyPending: number; // posiciones de sanción para la próxima carrera
     wear: number;               // desgaste del motor actual (0-1; a 1 se cambia)
 }
+
+// Rasgos de personalidad del piloto (afectan a la conducta en pista y negociación).
+export type DriverTrait =
+    | 'wetMaster'      // mago de la lluvia: menos penalización y error en mojado
+    | 'tyreWhisperer'  // cuida-ruedas: menos degradación
+    | 'aggressive'     // agresivo: más probabilidad de adelantar
+    | 'hotHead'        // cabeza caliente: más riesgo de contacto
+    | 'ironNerve'      // nervios de acero: menos errores
+    | 'qualiSpecialist'; // especialista a una vuelta: mejor en clasificación
 
 export interface Driver {
     id: string;
@@ -58,6 +76,7 @@ export interface Driver {
     age: number;            // edad en años
     morale: number;         // 0-100
     engine: EngineAllocation;
+    traits: DriverTrait[];  // rasgos de personalidad
 }
 
 export interface Circuit {
@@ -213,9 +232,12 @@ export interface DriverCareer {
 
 export interface UpgradeOrder {
     stat: CarStatKey;
-    points: number;
+    points: number;      // puntos objetivo (compat: = predicted)
     cost: number;
     readyAtRace: number; // raceIndex en el que la mejora llega al coche
+    predicted: number;   // puntos previstos por el proyecto
+    variance: number;    // ±rango de correlación (0 = entrega exacta)
+    delivered?: number;  // puntos reales entregados (se tiran al montar)
 }
 
 export interface BoardState {
@@ -267,5 +289,6 @@ export type GameAction =
     | { type: 'RENEW_DRIVER'; driverId: string; fee: number }
     | { type: 'HIRE_STAFF'; staffId: string; fee: number }
     | { type: 'TAKE_ENGINE'; driverId: string }
+    | { type: 'UPGRADE_FACILITY'; facility: keyof Facilities; cost: number }
     | { type: 'ADVANCE_SEASON' }
     | { type: 'RESET' };

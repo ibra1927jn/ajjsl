@@ -1,5 +1,5 @@
 import { Circuit, Driver, Team } from '../types';
-import { QUALI_NOISE_BASE, QUALI_RUNS, SETUP_BASE_QUALITY, SETUP_LAP_BONUS_MAX, SETUP_QUALI_NOISE_REDUCTION } from '../data/constants';
+import { QUALI_NOISE_BASE, QUALI_RUNS, SETUP_BASE_QUALITY, SETUP_LAP_BONUS_MAX, SETUP_QUALI_NOISE_REDUCTION, TRAIT_QUALI_NOISE_MULT } from '../data/constants';
 import { perfDelta } from './performance';
 import { moraleLapDelta } from './morale';
 import { Rng } from './rng';
@@ -32,7 +32,8 @@ export function simulateQualifying(
             const noiseSd = QUALI_NOISE_BASE
                 * (1.5 - (driver.consistency * 0.5 + driver.experience * 0.5) / 100)
                 * (1 - SETUP_QUALI_NOISE_REDUCTION * setupQ)
-                * (qualiNoiseMults?.[team.id] ?? 1);
+                * (qualiNoiseMults?.[team.id] ?? 1)
+                * (driver.traits.includes('qualiSpecialist') ? TRAIT_QUALI_NOISE_MULT : 1);
             let best = Infinity;
             for (let run = 0; run < QUALI_RUNS; run++) {
                 const t = circuit.baseLapSec - 1.5 + delta + Math.abs(rng.gaussian(0, noiseSd));

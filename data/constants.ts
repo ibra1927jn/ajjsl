@@ -140,6 +140,15 @@ export const PACE_MODES: Record<import('../types').PaceMode, PaceSpec> = {
 };
 export const TEAM_ORDER_CUSHION = 0.3; // s de colchón al intercambiar posiciones
 
+// ----- Rasgos de piloto (magnitudes) -----
+export const TRAIT_TYRE_DEG_MULT = 0.85;     // cuida-ruedas: ×deg
+export const TRAIT_WET_NOISE_MULT = 0.6;     // mago de la lluvia: ×ruido en mojado
+export const TRAIT_WET_ERROR_MULT = 0.6;     // mago de la lluvia: ×error en mojado
+export const TRAIT_AGGRO_OVERTAKE_ADD = 0.06;// agresivo: +prob. de adelantar
+export const TRAIT_HOTHEAD_CONTACT_ADD = 0.04;// cabeza caliente: +prob. de contacto
+export const TRAIT_IRON_ERROR_MULT = 0.7;    // nervios de acero: ×error
+export const TRAIT_QUALI_NOISE_MULT = 0.85;  // especialista a una vuelta: ×ruido en quali
+
 // ----- ERS / energía (dial del jugador + política IA) -----
 // lapDelta = bonus/penalización de ritmo (− = más rápido); charge = Δ carga por
 // vuelta (+ recarga, − gasta). La carga vive en CarState.ers (0-1) y avanza en
@@ -190,6 +199,19 @@ export const STAT_CAP = 99;
 export const AI_DEV_SPEND_FRACTION = 0.55;     // % de sus ingresos que la IA invierte en coche
 export const UPGRADE_LEAD_RACES = 2;           // carreras que tarda una mejora en fabricarse
 export const DEV_COST_CAP = 60;                // $M máximos de desarrollo por temporada (todos)
+
+// ----- I+D con riesgo de correlación -----
+// Los proyectos entregan puntos con varianza (± una fracción de lo previsto).
+// El túnel de viento reduce esa varianza; a nivel 5 la entrega es casi exacta.
+export const UPGRADE_VARIANCE_BASE = 0.4;      // ±40% de lo previsto a túnel nivel 1
+export const WIND_TUNNEL_VARIANCE_CUT = 0.07;  // −7% de varianza por nivel de túnel
+
+// ----- Instalaciones -----
+export const FACILITY_MAX = 5;
+export const FACILITY_COST = [0, 8, 16, 28, 44]; // coste $M para subir A nivel i+1 (índice = nivel actual)
+export const SIM_QUALI_NOISE_CUT = 0.03;       // −3% de ruido en quali por nivel de simulador
+export const FACTORY_PIT_DELTA = 0.15;         // −0.15s por parada por nivel de fábrica
+export const FACTORY_LEAD_L5 = 1;              // a fábrica nivel 5, una mejora tarda 1 carrera menos
 
 // ----- Motores -----
 export const ENGINE_POOL = 3;            // unidades de potencia por temporada sin penalización

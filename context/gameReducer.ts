@@ -7,6 +7,7 @@ import { generateMissions, evaluateMissions } from '../engine/missions';
 import { applyRaceToRecords } from '../engine/records';
 import { TEAMS } from '../data/teams';
 import { DRIVERS } from '../data/drivers';
+import { defaultFacilities } from '../data/driverTraits';
 import { CIRCUITS } from '../data/circuits';
 import { initialStaffAssignment } from '../data/staff';
 import {
@@ -15,6 +16,7 @@ import {
     PATIENCE_GAIN_PER_RACE, PATIENCE_LOSS_CAP, PATIENCE_LOSS_PER_RACE,
     REG_BASE_SEASON, REG_KEEP, REG_SHAKE_SD, REGULATION_PERIOD,
     SPONSOR_PER_RACE, STAT_CAP, UPGRADE_LEAD_RACES,
+    UPGRADE_VARIANCE_BASE, WIND_TUNNEL_VARIANCE_CUT, FACILITY_COST, FACILITY_MAX, FACTORY_LEAD_L5,
 } from '../data/constants';
 import { prizeFor } from '../engine/results';
 import { aiDevelop } from '../engine/development';
@@ -35,7 +37,7 @@ export function createNewGame(playerTeamId: string, difficulty: Difficulty = 'no
     const { staff, byTeam } = initialStaffAssignment();
     const teams: Record<string, Team> = {};
     for (const t of TEAMS) {
-        teams[t.id] = { ...t, car: { ...t.car }, driverIds: [...t.driverIds], devSpendSeason: 0, staffIds: byTeam[t.id] };
+        teams[t.id] = { ...t, car: { ...t.car }, driverIds: [...t.driverIds], devSpendSeason: 0, staffIds: byTeam[t.id], facilities: defaultFacilities(t.car) };
     }
     teams[playerTeamId].budget = Math.round(teams[playerTeamId].budget * DIFFICULTY[difficulty].budgetMult * 10) / 10;
     const drivers: Record<string, Driver> = {};
@@ -117,10 +119,17 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
             const player = teams[state.playerTeamId];
             const ready = state.upgradeQueue.filter(o => o.readyAtRace <= raceIndex);
             const pending = state.upgradeQueue.filter(o => o.readyAtRace > raceIndex);
-            for (const order of ready) {
-                player.car[order.stat] = Math.min(STAT_CAP, player.car[order.stat] + order.points);
-                ledger.push({ raceIndex, label: `Mejora de ${order.stat} (+${order.points}) montada en el coche`, amount: 0 });
-            }
+            ready.forEach((order, qi) => {
+                // Riesgo de correlación: los puntos entregados varían ± varianza (Rng
+                // dedicado y determinista → el reducer sigue puro, sin Math.random).
+                const rng = new Rng((state.season * 1009 + raceIndex * 31 + qi) >>> 0);
+                const swing = order.variance > 0 ? (rng.next() * 2 - 1) * order.variance : 0;
+                const delivered = Math.max(0, Math.round(order.predicted * (1 + swing) * 10) / 10);
+                player.car[order.stat] = Math.min(STAT_CAP, player.car[order.stat] + delivered);
+                const vs = delivered > order.predicted ? '↑ supera lo previsto'
+                    : delivered < order.predicted ? '↓ por debajo de lo previsto' : 'según lo previsto';
+                ledger.push({ raceIndex, label: `Mejora de ${order.stat} (+${delivered}) montada · ${vs}`, amount: 0 });
+            });
 
             // Motores: desgaste de la carrera + limpieza de sanciones ya aplicadas.
             const drivers: Record<string, Driver> = {};
@@ -197,6 +206,25 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
             };
         }
 
+        case 'UPGRADE_FACILITY': {
+            const player = state.teams[state.playerTeamId];
+            const level = player.facilities[action.facility];
+            if (level >= FACILITY_MAX) return state;
+            if (player.budget < action.cost) return state;
+            return {
+                ...state,
+                teams: {
+                    ...state.teams,
+                    [player.id]: {
+                        ...player,
+                        budget: Math.round((player.budget - action.cost) * 10) / 10,
+                        facilities: { ...player.facilities, [action.facility]: level + 1 },
+                    },
+                },
+                ledger: [...state.ledger, { raceIndex: state.raceIndex, label: `Mejora de instalación: ${action.facility} → nivel ${level + 1}`, amount: -action.cost }],
+            };
+        }
+
         case 'APPLY_UPGRADE': {
             // Encola la mejora: se cobra ya, pero tarda UPGRADE_LEAD_RACES en llegar al coche.
             const player = state.teams[state.playerTeamId];
@@ -214,6 +242,10 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                     devSpendSeason: Math.round((player.devSpendSeason + action.cost) * 10) / 10,
                 },
             };
+            // El túnel de viento reduce la varianza de correlación del proyecto.
+            const variance = Math.max(0, UPGRADE_VARIANCE_BASE - WIND_TUNNEL_VARIANCE_CUT * (player.facilities.windTunnel - 1));
+            // A fábrica nivel 5, la fabricación tarda una carrera menos.
+            const lead = Math.max(1, UPGRADE_LEAD_RACES - (player.facilities.factory >= FACILITY_MAX ? FACTORY_LEAD_L5 : 0));
             return {
                 ...state,
                 teams,
@@ -221,9 +253,11 @@ export function gameReducer(state: GameState | null, action: GameAction): GameSt
                     stat: action.stat,
                     points: action.points,
                     cost: action.cost,
-                    readyAtRace: state.raceIndex + UPGRADE_LEAD_RACES,
+                    readyAtRace: state.raceIndex + lead,
+                    predicted: action.points,
+                    variance,
                 }],
-                ledger: [...state.ledger, { raceIndex: state.raceIndex, label: `Fabricación: mejora de ${action.stat} (+${action.points})`, amount: -action.cost }],
+                ledger: [...state.ledger, { raceIndex: state.raceIndex, label: `Fabricación: mejora de ${action.stat} (~+${action.points})`, amount: -action.cost }],
             };
         }
 

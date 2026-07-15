@@ -4,10 +4,11 @@ import { freshEngine } from '../engine/driverInit';
 import { applyRaceToRecords } from '../engine/records';
 import { BOARD_START_PATIENCE, BOARD_TARGET_SLACK } from '../data/constants';
 import { DEFAULT_AGE, DEFAULT_MORALE, DRIVER_AGES } from '../data/driverAges';
+import { DRIVER_TRAITS, defaultFacilities } from '../data/driverTraits';
 import { initialStaffAssignment } from '../data/staff';
 import { clearLive } from './livePersistence';
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 const KEY = 'f1m_save';
 
 // Reconstruye records de vuelta y estadísticas de piloto desde los resultados
@@ -78,6 +79,23 @@ const migrations: Record<number, (old: unknown) => unknown> = {
             records: s.records ?? records,
             driverRecords: s.driverRecords ?? driverRecords,
         };
+    },
+    // v4 → v5: rasgos de piloto, instalaciones del equipo y varianza de I+D.
+    4: (old) => {
+        const s = old as GameState;
+        const drivers: Record<string, Driver> = {};
+        for (const [id, d] of Object.entries(s.drivers)) {
+            drivers[id] = { ...d, traits: d.traits ?? DRIVER_TRAITS[id] ?? [] };
+        }
+        const teams: Record<string, Team> = {};
+        for (const [id, t] of Object.entries(s.teams)) {
+            teams[id] = { ...t, facilities: t.facilities ?? defaultFacilities(t.car) };
+        }
+        // Las mejoras en curso entregan lo previsto (varianza 0 → sin sorpresa retroactiva).
+        const upgradeQueue = s.upgradeQueue.map(o => ({
+            ...o, predicted: o.predicted ?? o.points, variance: o.variance ?? 0,
+        }));
+        return { ...s, saveVersion: 5, drivers, teams, upgradeQueue };
     },
 };
 

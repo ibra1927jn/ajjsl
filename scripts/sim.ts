@@ -10,6 +10,7 @@ import { finalizeRace, finalizeSprint } from '../engine/results';
 import { compoundWetPenalty } from '../engine/weather';
 import { COMPOUNDS, SPRINT_LAP_FRACTION } from '../data/constants';
 import { scaledLaps } from '../engine/race';
+import { parseSave } from '../services/persistence';
 
 const PLAYER = 'williams';
 const args = process.argv.slice(2);
@@ -245,6 +246,23 @@ function ersCheck() {
     if (!okResume || !okDet || !okInv || !ersInRange) process.exit(1);
 }
 
+// Migración v4→v5: un save viejo debe cargar con los campos nuevos rellenos.
+function migrationCheck() {
+    const g = createNewGame(PLAYER);
+    const v4 = JSON.parse(JSON.stringify(g)) as Record<string, any>;
+    for (const d of Object.values(v4.drivers as Record<string, any>)) delete d.traits;
+    for (const t of Object.values(v4.teams as Record<string, any>)) delete t.facilities;
+    v4.upgradeQueue = [{ stat: 'aero', points: 4, cost: 10, readyAtRace: 2 }];
+    v4.saveVersion = 4;
+    const migrated = parseSave(JSON.stringify({ version: 4, state: v4 }));
+    const ok = !!migrated
+        && Object.values(migrated.drivers).every(d => Array.isArray(d.traits))
+        && Object.values(migrated.teams).every(t => t.facilities && t.facilities.windTunnel >= 1)
+        && migrated.upgradeQueue.every(o => o.predicted === o.points && o.variance === 0);
+    console.log(`migración v4→v5 (round-trip, sin pérdida): ${ok ? 'OK ✓' : 'FALLO ✗'}`);
+    if (!ok) process.exit(1);
+}
+
 // Carrera profesional de N temporadas con el reducer completo: invariantes de
 // economía, mercado, personal, junta y palmarés.
 function careerCheck(seasons: number) {
@@ -292,8 +310,11 @@ if (flag('career')) {
 } else if (flag('resume-check')) {
     resumeCheck();
     ersCheck();
+    migrationCheck();
 } else if (flag('ers-check')) {
     ersCheck();
+} else if (flag('migration-check')) {
+    migrationCheck();
 } else if (flag('wet-sweep')) {
     wetSweep();
     wetSeason();
