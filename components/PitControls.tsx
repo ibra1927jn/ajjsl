@@ -1,16 +1,19 @@
 import React from 'react';
-import { Compound, Driver, PaceMode, RaceState } from '../types';
-import { COMPOUNDS, PACE_MODES } from '../data/constants';
+import { Compound, Driver, ErsMode, PaceMode, RaceState } from '../types';
+import { COMPOUNDS, ERS_MODES, PACE_MODES } from '../data/constants';
 import { TireBadge } from './TimingTower';
 import { IconSwap, IconWarning } from './icons';
 
-// Muro de boxes: paradas, dial de ritmo y órdenes de equipo del jugador.
-export const PitControls = ({ race, playerTeamId, drivers, onQueuePit, onPaceMode, onSwap }: {
+const ERS_ORDER: ErsMode[] = ['harvest', 'balanced', 'hotlap', 'overtake'];
+
+// Muro de boxes: paradas, dial de ritmo, ERS y órdenes de equipo del jugador.
+export const PitControls = ({ race, playerTeamId, drivers, onQueuePit, onPaceMode, onErsMode, onSwap }: {
     race: RaceState;
     playerTeamId: string;
     drivers: Record<string, Driver>;
     onQueuePit: (driverId: string, compound: Compound | null) => void;
     onPaceMode: (driverId: string, mode: PaceMode) => void;
+    onErsMode: (driverId: string, mode: ErsMode) => void;
     onSwap: () => void;
 }) => {
     const playerCars = race.cars.filter(c => c.teamId === playerTeamId);
@@ -107,6 +110,37 @@ export const PitControls = ({ race, playerTeamId, drivers, onQueuePit, onPaceMod
                                                     }`}
                                                 >
                                                     {PACE_MODES[m].label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center justify-between mb-1.5">
+                                            <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">Energía</p>
+                                            <div className="flex items-center gap-1.5">
+                                                <div className="w-16 h-1.5 rounded-full bg-card-darker overflow-hidden">
+                                                    <div className="h-full rounded-full transition-all"
+                                                        style={{ width: `${Math.round(car.ers * 100)}%`, background: car.ers > 0.25 ? '#22e07a' : '#ffd12e' }} />
+                                                </div>
+                                                <span className="font-display text-[10px] font-bold tabular-nums text-text-sub w-7 text-right">{Math.round(car.ers * 100)}%</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-1">
+                                            {ERS_ORDER.map(m => (
+                                                <button
+                                                    key={m}
+                                                    disabled={disabled}
+                                                    onClick={() => onErsMode(car.driverId, m)}
+                                                    title={ERS_MODES[m].label}
+                                                    className={`flex-1 font-display text-[10px] font-bold uppercase tracking-wide py-1.5 rounded-lg border transition-colors disabled:opacity-40 ${
+                                                        car.ersMode === m
+                                                            ? m === 'overtake' ? 'bg-weather-blue/20 border-weather-blue text-weather-blue'
+                                                                : m === 'harvest' ? 'bg-gap-green/20 border-gap-green text-gap-green'
+                                                                : 'bg-border-dark border-border-soft text-text-main'
+                                                            : 'bg-card-darker border-border-dark text-text-sub hover:text-text-main'
+                                                    }`}
+                                                >
+                                                    {m === 'overtake' ? 'OT' : m === 'balanced' ? 'BAL' : m === 'harvest' ? 'CARGA' : 'HOT'}
                                                 </button>
                                             ))}
                                         </div>

@@ -402,7 +402,7 @@ const SessionRunner = ({ kind, grid, circuit, teams, drivers, playerTeamId, seed
     onLap?: (state: RaceState) => void;
     onFinished: (raceState: RaceState) => void;
 }) => {
-    const { race, paused, setPaused, speedIdx, setSpeedIdx, queuePit, setPaceMode, requestSwap } = useRaceSim(
+    const { race, paused, setPaused, speedIdx, setSpeedIdx, queuePit, setPaceMode, setErsMode, requestSwap } = useRaceSim(
         grid, circuit, teams, drivers, playerTeamId, seed,
         { kind, lapsOverride, playerStartCompound: startCompound, mods, raceLength, initial, onLap });
     const finished = race.phase === 'finished';
@@ -454,7 +454,7 @@ const SessionRunner = ({ kind, grid, circuit, teams, drivers, playerTeamId, seed
                 </div>
                 <div className="lg:col-span-2 lg:row-start-1 lg:col-start-4 order-2">
                     <PitControls race={race} playerTeamId={playerTeamId} drivers={drivers}
-                        onQueuePit={queuePit} onPaceMode={setPaceMode} onSwap={requestSwap} />
+                        onQueuePit={queuePit} onPaceMode={setPaceMode} onErsMode={setErsMode} onSwap={requestSwap} />
                 </div>
                 <div className="lg:col-span-3 lg:row-start-2 lg:col-start-1 order-3">
                     <TimingTower race={race} teams={teams} drivers={drivers} playerTeamId={playerTeamId} />

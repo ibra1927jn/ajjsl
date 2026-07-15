@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Circuit, Compound, Driver, PaceMode, RaceState, Team } from '../types';
+import { Circuit, Compound, Driver, ErsMode, PaceMode, RaceState, Team } from '../types';
 import { TICK_SPEEDS } from '../data/constants';
 import { advanceSector, applyTeamOrderSwap, createRaceState, RaceOptions } from '../engine/race';
 import { QualiResult } from '../engine/qualifying';
@@ -57,9 +57,18 @@ export function useRaceSim(
         }));
     };
 
+    const setErsMode = (driverId: string, ersMode: ErsMode) => {
+        setRace(prev => ({
+            ...prev,
+            cars: prev.cars.map(c =>
+                c.driverId === driverId && c.teamId === playerTeamId ? { ...c, ersMode } : c,
+            ),
+        }));
+    };
+
     const requestSwap = () => {
         setRace(prev => (prev.phase === 'finished' ? prev : applyTeamOrderSwap(prev, playerTeamId)));
     };
 
-    return { race, paused, setPaused, speedIdx, setSpeedIdx, queuePit, setPaceMode, requestSwap };
+    return { race, paused, setPaused, speedIdx, setSpeedIdx, queuePit, setPaceMode, setErsMode, requestSwap };
 }
