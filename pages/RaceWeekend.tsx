@@ -405,7 +405,9 @@ const SessionRunner = ({ kind, grid, circuit, teams, drivers, playerTeamId, seed
                 <span className="font-extrabold tabular-nums">
                     {kind === 'sprint' && <span className="text-pit-yellow mr-2">SPRINT</span>}
                     Vuelta {Math.min(race.lap + (finished ? 0 : 1), race.totalLaps)}/{race.totalLaps}
+                    {!finished && <span className="ml-1.5 text-text-sub text-xs font-bold">S{race.sector + 1}</span>}
                     {race.phase === 'safetyCar' && <span className="ml-2 text-pit-yellow text-xs font-bold animate-pulse">SAFETY CAR</span>}
+                    {race.phase === 'vsc' && <span className="ml-2 text-pit-yellow text-xs font-bold animate-pulse">VSC</span>}
                     {wetness >= 0.05 && (
                         <span className="ml-2 text-[#4aa8ff] text-xs font-bold">🌧️ {Math.round(wetness * 100)}%</span>
                     )}

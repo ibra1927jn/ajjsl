@@ -2,7 +2,7 @@ import { Compound, DriverResult, RaceState } from '../types';
 
 // Estado vivo del fin de semana (carrera a medias). Clave separada del save
 // principal; se descarta si no coincide con la partida — nunca se migra.
-export const LIVE_VERSION = 2; // v2: añade setups (los live saves v1 se descartan)
+export const LIVE_VERSION = 3; // v3: RaceState por sectores (los live saves viejos se descartan)
 const KEY = 'f1m_live';
 
 export interface LiveSave {

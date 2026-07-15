@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Circuit, Compound, Driver, PaceMode, RaceState, Team } from '../types';
 import { TICK_SPEEDS } from '../data/constants';
-import { advanceLap, applyTeamOrderSwap, createRaceState, RaceOptions } from '../engine/race';
+import { advanceSector, applyTeamOrderSwap, createRaceState, RaceOptions } from '../engine/race';
 import { QualiResult } from '../engine/qualifying';
 
 // Loop de ticks de la carrera en vivo.
@@ -30,7 +30,7 @@ export function useRaceSim(
     useEffect(() => {
         if (paused || finished) return;
         const id = setInterval(() => {
-            setRace(prev => advanceLap(prev, circuit, teams, drivers, playerTeamId));
+            setRace(prev => advanceSector(prev, circuit, teams, drivers, playerTeamId));
         }, TICK_SPEEDS[speedIdx].ms);
         return () => clearInterval(id);
         // teams/drivers/circuit no cambian durante una carrera

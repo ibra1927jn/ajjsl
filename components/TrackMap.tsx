@@ -76,7 +76,9 @@ export const TrackMap = ({ race, teams, playerTeamId, tickMs, paused, avgLapSec 
                 return { p: (car.dnfLap ?? 0) - 0.5, dnf: true };
             }
             const leader = running[0];
-            return { p: state.lap - (car.totalTime - leader.totalTime) / avgLapSec, dnf: false };
+            // Progreso en vueltas: vuelta + sector/3, menos el gap al líder en fracción de vuelta.
+            const base = state.lap + state.sector / 3;
+            return { p: base - (car.totalTime - leader.totalTime) / avgLapSec, dnf: false };
         };
 
         const frame = () => {

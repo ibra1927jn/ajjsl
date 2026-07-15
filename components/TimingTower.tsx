@@ -1,7 +1,7 @@
 import React from 'react';
 import { Driver, RaceState, Team } from '../types';
 import { COMPOUNDS } from '../data/constants';
-import { formatGap } from './ui';
+import { formatGap, formatLapTime } from './ui';
 
 export const TireBadge = ({ compound, age }: { compound: keyof typeof COMPOUNDS; age?: number }) => {
     const spec = COMPOUNDS[compound];
@@ -44,6 +44,9 @@ export const TimingTower = ({ race, teams, drivers, playerTeamId }: {
                         <span className="w-1 h-5 rounded-full" style={{ background: team.color }} />
                         <span className={`w-12 font-bold ${hasFL ? 'text-fastest-purple' : ''}`}>{driver.shortCode}</span>
                         <span className="flex-1 text-text-sub text-xs hidden sm:block truncate">{team.shortName}</span>
+                        <span className={`w-16 text-right tabular-nums text-[11px] ${hasFL ? 'text-fastest-purple' : 'text-text-sub'}`}>
+                            {!dnf && car.lastLap > 0 ? formatLapTime(car.lastLap) : ''}
+                        </span>
                         <span className="w-16 text-right tabular-nums text-xs">
                             {dnf ? <span className="text-danger font-semibold">DNF</span>
                                 : car === leader ? <span className="text-gap-green font-semibold">Líder</span>
