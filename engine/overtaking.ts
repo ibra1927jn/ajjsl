@@ -1,7 +1,7 @@
 import { CarState, Circuit, Driver, RaceEvent } from '../types';
 import {
     CONTACT_ATTACKER_LOSS, CONTACT_DEFENDER_CHANCE, CONTACT_DEFENDER_LOSS, CONTACT_PENALTY_SEC,
-    DAMAGE_CHANCE_ON_CONTACT, DRS_OVERTAKE_ADD, DUEL_CONTACT_CHANCE, FRONT_WING_PENALTY,
+    DAMAGE_CHANCE_ON_CONTACT, DRS_OVERTAKE_ADD, DUEL_CONTACT_CHANCE, ERS_OVERTAKE_ADD, FRONT_WING_PENALTY,
     OVERTAKE_BASE, OVERTAKE_PACE_FACTOR, OVERTAKE_STUCK_GAP,
 } from '../data/constants';
 import { Rng } from './rng';
@@ -19,6 +19,7 @@ export function resolveOvertakes(
     order: CarState[],
     pittedThisLap: Set<string>,
     drsSet: Set<string>,
+    ersSet: Set<string>,
     circuit: Circuit,
     drivers: Record<string, Driver>,
     lap: number,
@@ -54,7 +55,8 @@ export function resolveOvertakes(
                     * (1 - circuit.overtakingDifficulty)
                     * racecraftFactor
                     * (1 + OVERTAKE_PACE_FACTOR * Math.min(paceDelta, 2))
-                + (drsSet.has(behind.driverId) ? DRS_OVERTAKE_ADD : 0));
+                + (drsSet.has(behind.driverId) ? DRS_OVERTAKE_ADD : 0)
+                + (ersSet.has(behind.driverId) ? ERS_OVERTAKE_ADD : 0));
 
             if (rng.chance(p)) {
                 order[i - 1] = behind;

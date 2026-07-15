@@ -185,6 +185,54 @@ function resumeCheck() {
     if (order(byLap) !== order(bySec)) process.exit(1);
 }
 
+// ERS activo: reanudar debe seguir siendo bit-idéntico y la carga vivir en [0,1].
+function ersCheck() {
+    const game = createNewGame(PLAYER);
+    const circuit = CIRCUITS.find(c => c.id === 'britain')!;
+    const grid = simulateQualifying(game.teams, game.drivers, circuit, new Rng(99));
+    // Modos de gasto en los coches del jugador para forzar dinámica de batería.
+    const seed = (): RaceState => {
+        const r = createRaceState(grid, circuit, PLAYER, 100);
+        const modes = ['overtake', 'hotlap'] as const;
+        let k = 0;
+        for (const c of r.cars) if (c.teamId === PLAYER) c.ersMode = modes[k++ % 2];
+        return r;
+    };
+    const ord = (s: RaceState) =>
+        s.cars.map(c => `${c.driverId}:${c.totalTime.toFixed(3)}:${c.status}:${c.ers.toFixed(4)}`).join('|');
+
+    let full = seed();
+    let snap = '';
+    let ersInRange = true;
+    while (full.phase !== 'finished') {
+        full = advanceLap(full, circuit, game.teams, game.drivers, PLAYER);
+        for (const c of full.cars) if (c.ers < -1e-9 || c.ers > 1 + 1e-9) ersInRange = false;
+        if (full.lap === 10 && !snap) snap = JSON.stringify(full);
+    }
+    let resumed = JSON.parse(snap) as RaceState;
+    while (resumed.phase !== 'finished') resumed = advanceLap(resumed, circuit, game.teams, game.drivers, PLAYER);
+
+    let a = seed(), b = seed();
+    while (a.phase !== 'finished') a = advanceLap(a, circuit, game.teams, game.drivers, PLAYER);
+    while (b.phase !== 'finished') b = advanceLap(b, circuit, game.teams, game.drivers, PLAYER);
+
+    // Invariante lap === 3×sector con ERS activo.
+    let byLap = seed(), bySec = seed();
+    for (let k = 0; k < 15; k++) {
+        byLap = advanceLap(byLap, circuit, game.teams, game.drivers, PLAYER);
+        for (let j = 0; j < 3; j++) bySec = advanceSector(bySec, circuit, game.teams, game.drivers, PLAYER);
+    }
+
+    const okResume = ord(full) === ord(resumed);
+    const okDet = ord(a) === ord(b);
+    const okInv = ord(byLap) === ord(bySec);
+    console.log(`\nERS resume-equivalencia (con batería): ${okResume ? 'OK ✓' : 'FALLO ✗'}`);
+    console.log(`ERS determinismo (mismo seed × 2): ${okDet ? 'OK ✓' : 'FALLO ✗'}`);
+    console.log(`ERS invariante lap === 3×sector: ${okInv ? 'OK ✓' : 'FALLO ✗'}`);
+    console.log(`ERS carga en [0,1] toda la carrera: ${ersInRange ? 'OK ✓' : 'FALLO ✗'}`);
+    if (!okResume || !okDet || !okInv || !ersInRange) process.exit(1);
+}
+
 // Carrera profesional de N temporadas con el reducer completo: invariantes de
 // economía, mercado, personal, junta y palmarés.
 function careerCheck(seasons: number) {
@@ -230,6 +278,9 @@ if (flag('career')) {
     detail(args[args.indexOf('--detail') + 1] ?? 'monza', numArg('seed', 42));
 } else if (flag('resume-check')) {
     resumeCheck();
+    ersCheck();
+} else if (flag('ers-check')) {
+    ersCheck();
 } else if (flag('wet-sweep')) {
     wetSweep();
     wetSeason();

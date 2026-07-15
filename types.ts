@@ -75,6 +75,9 @@ export interface Circuit {
 
 export type Compound = 'soft' | 'medium' | 'hard' | 'inter' | 'wet';
 export type PaceMode = 'attack' | 'normal' | 'conserve';
+// Modo de despliegue de energía (ERS). hotlap/overtake gastan batería para ir
+// más rápido; harvest recarga a cambio de tiempo; balanced se sostiene solo.
+export type ErsMode = 'hotlap' | 'balanced' | 'harvest' | 'overtake';
 export type SessionKind = 'race' | 'sprint';
 
 // ===== Carrera en vivo (estado efímero, no se persiste) =====
@@ -103,12 +106,15 @@ export interface CarState {
     penaltySec: number;          // penalizaciones acumuladas, se suman en meta
     damage: number;              // daño de ala: s/vuelta hasta reparar en boxes
     attackSectors: number;       // sectores corridos en 'attack' (desgaste de motor)
+    ers: number;                 // carga de batería 0-1
+    ersMode: ErsMode;            // modo de despliegue de energía
 }
 
 // Plan de la vuelta calculado en el sector 0 (transitorio, se reparte por sectores).
 export interface LapPlanEntry {
-    pace: number;    // tiempo total de la vuelta (s)
-    pitLoss: number; // pérdida por parada si va a boxes esta vuelta
+    pace: number;     // tiempo total de la vuelta (s)
+    pitLoss: number;  // pérdida por parada si va a boxes esta vuelta
+    ersDelta: number; // bonus/penalización de ritmo por ERS (− = más rápido), congelado en sector 0
 }
 
 // Posiciones al inicio de la vuelta, para la radio (ligero, sin snapshot completo).
@@ -147,6 +153,7 @@ export interface RaceState {
     mods: Record<string, { setupLapDelta: number; pitLossDelta: number }>;
     lapPlan: Record<string, LapPlanEntry>; // transitorio, se recalcula en cada sector 0
     drsDrivers: string[];                  // coches con DRS, fijado en el sector 0
+    ersDrivers: string[];                  // coches desplegando ERS 'overtake', fijado en el sector 0
     lapStart: LapStartInfo;                // posiciones al inicio de la vuelta (radio)
 }
 

@@ -139,6 +139,22 @@ export const PACE_MODES: Record<import('../types').PaceMode, PaceSpec> = {
 };
 export const TEAM_ORDER_CUSHION = 0.3; // s de colchón al intercambiar posiciones
 
+// ----- ERS / energía (dial del jugador + política IA) -----
+// lapDelta = bonus/penalización de ritmo (− = más rápido); charge = Δ carga por
+// vuelta (+ recarga, − gasta). La carga vive en CarState.ers (0-1) y avanza en
+// tercios por sector → reanudar a mitad de vuelta es bit-idéntico.
+export interface ErsSpec { lapDelta: number; charge: number; label: string }
+export const ERS_MODES: Record<import('../types').ErsMode, ErsSpec> = {
+    hotlap:   { lapDelta: -0.20, charge: -0.45, label: 'Vuelta rápida' },
+    balanced: { lapDelta: 0,     charge: +0.10, label: 'Equilibrado' },
+    harvest:  { lapDelta: +0.12, charge: +0.35, label: 'Recargar' },
+    overtake: { lapDelta: -0.34, charge: -0.60, label: 'Adelantar' },
+};
+export const ERS_MIN_DEPLOY = 0.08;   // carga mínima para que un modo de gasto dé bonus
+export const ERS_ATTACK_GAP = 1.0;    // la IA despliega 'overtake' dentro de este gap
+export const ERS_LOW_CHARGE = 0.25;   // por debajo, la IA prioriza recargar
+export const ERS_OVERTAKE_ADD = 0.08; // prob. extra de adelantamiento (aditiva, como el DRS)
+
 // ----- Estrategia IA -----
 export const AI_STINT_JITTER = 0.15;     // ±15% sobre el stint objetivo
 export const SC_FREE_STOP_AGE = 0.6;     // la IA para bajo SC si su neumático supera este % de vida

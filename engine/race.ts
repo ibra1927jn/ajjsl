@@ -15,7 +15,26 @@ import { compoundWetPenalty, dryTrackDegMult, generateWeather, wetLapPenalty } f
 import { moraleLapDelta } from './morale';
 import { collectRadio } from './radio';
 import { DRS_LAP_GAIN, DRS_RANGE, PACE_MODES, TEAM_ORDER_CUSHION, TO_INTER_WETNESS, TO_WET_WETNESS, WET_NOISE_FACTOR } from '../data/constants';
+import { ERS_ATTACK_GAP, ERS_LOW_CHARGE, ERS_MIN_DEPLOY, ERS_MODES } from '../data/constants';
+import { ErsMode } from '../types';
 import { Rng } from './rng';
+
+// Política ERS de un coche IA según su situación en pista (pura, sin rng).
+// El jugador conserva su propio ersMode (lo fija la UI).
+function aiErsMode(ers: number, gapAhead: number | null, gapBehind: number | null): ErsMode {
+    if (gapAhead !== null && gapAhead < ERS_ATTACK_GAP && ers >= ERS_MIN_DEPLOY) return 'overtake';
+    if (ers < ERS_LOW_CHARGE) return 'harvest';
+    if (gapBehind !== null && gapBehind < ERS_ATTACK_GAP && ers >= ERS_MIN_DEPLOY) return 'hotlap';
+    return 'balanced';
+}
+
+// Bonus de ritmo del ERS este ciclo (− = más rápido), congelado en el sector 0.
+// Los modos de gasto solo dan bonus con carga suficiente.
+function ersLapDelta(mode: ErsMode, ers: number): number {
+    const spec = ERS_MODES[mode];
+    if (spec.charge < 0) return ers >= ERS_MIN_DEPLOY ? spec.lapDelta : 0;
+    return spec.lapDelta; // balanced (0) / harvest (+, cuesta tiempo) siempre aplican
+}
 
 export function scaledLaps(circuit: Circuit, raceLength: RaceLength = 'medium'): number {
     return Math.max(5, Math.round(circuit.laps * RACE_LENGTH_SCALE[raceLength]));
@@ -78,6 +97,8 @@ export function createRaceState(
             penaltySec: 0,
             damage: 0,
             attackSectors: 0,
+            ers: 1,                       // batería llena en la salida (constante, sin rng)
+            ersMode: 'balanced' as const,
         };
     });
     const kindLabel = opts.kind === 'sprint' ? 'Sprint' : 'Carrera';
@@ -103,6 +124,7 @@ export function createRaceState(
         mods: opts.mods ?? {},
         lapPlan: {},
         drsDrivers: [],
+        ersDrivers: [],
         lapStart: { order: [], fastestId: null, penalty: {} },
     };
 }
@@ -201,6 +223,7 @@ export function advanceSector(
         fastestLap: prev.fastestLap ? { ...prev.fastestLap } : null,
         lapPlan: { ...prev.lapPlan },
         drsDrivers: [...prev.drsDrivers],
+        ersDrivers: [...prev.ersDrivers],
         lapStart: prev.lapStart,
     };
     const rng = new Rng(state.rngState);
@@ -241,14 +264,30 @@ export function advanceSector(
         }
         state.drsDrivers = drs;
 
+        // ERS (sin rng): la IA elige modo según gaps; el jugador conserva el suyo.
+        // Congelamos el delta de ritmo y quién despliega 'overtake' este ciclo.
+        const ers: string[] = [];
+        const ersDeltas: Record<string, number> = {};
+        running.forEach((car, i) => {
+            const gapAhead = gaps[i];
+            const gapBehind = i + 1 < running.length ? running[i + 1].totalTime - car.totalTime : null;
+            if (car.teamId !== playerTeamId) car.ersMode = aiErsMode(car.ers, gapAhead, gapBehind);
+            const canDeploy = car.ers >= ERS_MIN_DEPLOY;
+            ersDeltas[car.driverId] = state.phase === 'green' ? ersLapDelta(car.ersMode, car.ers) : 0;
+            if (state.phase === 'green' && car.ersMode === 'overtake' && canDeploy) ers.push(car.driverId);
+        });
+        state.ersDrivers = ers;
+
         const plan: Record<string, LapPlanEntry> = {};
         running.forEach((car, i) => {
+            const ersDelta = ersDeltas[car.driverId] ?? 0;
             const pace = raceLapTime(car, gaps[i], circuit, state.totalLaps, lap, wetness, state.raceLength, state.mods, teams, drivers, rng)
-                - (drs.includes(car.driverId) ? DRS_LAP_GAIN : 0);
+                - (drs.includes(car.driverId) ? DRS_LAP_GAIN : 0)
+                + ersDelta;
             const pitLoss = car.pendingPit !== null
                 ? PIT_LOSS + (state.mods[car.teamId]?.pitLossDelta ?? 0) + rng.gaussian(0, PIT_LOSS_SD)
                 : 0;
-            plan[car.driverId] = { pace, pitLoss };
+            plan[car.driverId] = { pace, pitLoss, ersDelta };
         });
         state.lapPlan = plan;
         state.yellowSector = null;
@@ -307,6 +346,8 @@ export function advanceSector(
         car.lastSector = base;
         car.tireAge += (PACE_MODES[car.paceMode].degMult * dryTrackDegMult(car.compound, wetness)) / 3;
         if (car.paceMode === 'attack' && state.phase === 'green') car.attackSectors += 1; // desgasta el motor
+        // Batería ERS: carga/descarga en tercios (mantiene lap === 3×sector y resume idéntico).
+        car.ers = Math.max(0, Math.min(1, car.ers + ERS_MODES[car.ersMode].charge / 3));
         if (car.bestSectors[s] === 0 || base < car.bestSectors[s]) car.bestSectors[s] = base;
 
         // Al cerrar la vuelta: fijar tiempo de vuelta y ejecutar la parada.
@@ -332,7 +373,7 @@ export function advanceSector(
     // ===== Adelantamientos: la compuerta se resuelve UNA VEZ por vuelta (sector 2),
     // como en v3; los sectores 0/1 solo acumulan tiempo. El mapa se mueve por gap. =====
     if (s === 2) {
-        newEvents.push(...resolveOvertakes(running, pittedThisSector, new Set(state.drsDrivers), circuit, drivers, lap, rng));
+        newEvents.push(...resolveOvertakes(running, pittedThisSector, new Set(state.drsDrivers), new Set(state.ersDrivers), circuit, drivers, lap, rng));
     }
     state.cars = orderRunning(state.cars);
 
