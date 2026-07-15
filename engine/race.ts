@@ -1,9 +1,10 @@
 import { CarState, Circuit, Compound, Driver, LapPlanEntry, RaceEvent, RaceLength, RaceState, Sector, SessionKind, Team } from '../types';
 import {
     BASE_NOISE_SD, CLIFF_MULTIPLIER, COMPOUNDS, DEFAULT_SECTOR_SPLIT, DIRTY_AIR_PENALTY, DIRTY_AIR_RANGE,
-    DAMAGE_REPAIR_PIT_LOSS, FUEL_EFFECT, PIT_LOSS, PIT_LOSS_SD, RACE_FORM_SD, RACE_LENGTH_SCALE,
+    DAMAGE_REPAIR_PIT_LOSS, FUEL_EFFECT, MINOR_INCIDENT_RATE, PIT_LOSS, PIT_LOSS_SD, RACE_FORM_SD, RACE_LENGTH_SCALE,
     SC_CHANCE_ON_DNF, SC_COMPRESS_GAP, SC_LAP_FACTOR, SC_MAX_LAPS, SC_MIN_LAPS,
     SECTOR_INCIDENT_FRACTION, SECTOR_MICRO_SD,
+    VSC_CHANCE, VSC_MAX_LAPS, VSC_MIN_LAPS, VSC_SLOWDOWN, YELLOW_SLOWDOWN,
 } from '../data/constants';
 import { perfDelta } from './performance';
 import { QualiResult } from './qualifying';
@@ -263,6 +264,16 @@ export function advanceSector(
             state.phase = 'safetyCar';
             state.safetyCarLapsLeft = rng.int(SC_MIN_LAPS, SC_MAX_LAPS);
             newEvents.push({ lap, type: 'safetyCar', message: '🚨 SAFETY CAR en pista.' });
+        } else if (rng.chance(MINOR_INCIDENT_RATE * (1 + wetness))) {
+            // Incidente menor (coche detenido, restos): VSC o amarilla local.
+            if (rng.chance(VSC_CHANCE)) {
+                state.phase = 'vsc';
+                state.vscLapsLeft = rng.int(VSC_MIN_LAPS, VSC_MAX_LAPS);
+                newEvents.push({ lap, type: 'safetyCar', message: '🟡 VIRTUAL SAFETY CAR desplegado.' });
+            } else {
+                state.yellowSector = s;
+                newEvents.push({ lap, type: 'info', message: `🟡 Bandera amarilla en el sector ${s + 1}.` });
+            }
         }
     }
 
@@ -279,6 +290,8 @@ export function advanceSector(
             base = circuit.baseLapSec * SC_LAP_FACTOR * frac + rng.gaussian(0, 0.1 * frac);
         } else {
             base = pace * frac;
+            if (state.phase === 'vsc') base *= VSC_SLOWDOWN;          // todos lentos, sin agrupar
+            else if (state.yellowSector === s) base *= YELLOW_SLOWDOWN; // amarilla local
         }
         // La pérdida de parada aterriza en el último sector (más barata bajo SC).
         if (s === 2 && car.pendingPit !== null && entry) {
@@ -328,7 +341,7 @@ export function advanceSector(
                 state.fastestLap = { driverId: car.driverId, time: car.lapAccum };
             }
         }
-        // Fin del safety car: comprimir el pelotón.
+        // Fin del safety car: comprimir el pelotón. Fin del VSC: SIN compresión.
         if (state.phase === 'safetyCar') {
             state.safetyCarLapsLeft -= 1;
             if (state.safetyCarLapsLeft <= 0) {
@@ -339,6 +352,12 @@ export function advanceSector(
                 }
                 state.phase = 'green';
                 newEvents.push({ lap, type: 'safetyCarEnd', message: '🟢 Se reanuda la carrera.' });
+            }
+        } else if (state.phase === 'vsc') {
+            state.vscLapsLeft -= 1;
+            if (state.vscLapsLeft <= 0) {
+                state.phase = 'green';
+                newEvents.push({ lap, type: 'safetyCarEnd', message: '🟢 Fin del VSC, verde.' });
             }
         }
         state.lap = lap;

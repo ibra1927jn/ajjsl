@@ -122,6 +122,14 @@ export const SC_MAX_LAPS = 4;
 export const SC_LAP_FACTOR = 1.25;       // las vueltas bajo SC son base × factor
 export const SC_COMPRESS_GAP = 1.0;      // gap máximo entre coches al reanudar
 
+// ----- VSC y banderas amarillas -----
+export const MINOR_INCIDENT_RATE = 0.010; // prob. por sector de un incidente menor (coche parado/restos)
+export const VSC_CHANCE = 0.45;          // de un incidente menor, prob. de VSC (si no, amarilla local)
+export const VSC_MIN_LAPS = 1;
+export const VSC_MAX_LAPS = 2;
+export const VSC_SLOWDOWN = 1.35;        // vueltas bajo VSC × factor (sin agrupar el pelotón)
+export const YELLOW_SLOWDOWN = 1.15;     // sector con amarilla local × factor
+
 // ----- Ritmo (dial del jugador) -----
 export interface PaceSpec { lapDelta: number; degMult: number; errMult: number; label: string }
 export const PACE_MODES: Record<import('../types').PaceMode, PaceSpec> = {
