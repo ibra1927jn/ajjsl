@@ -5,6 +5,13 @@ import { TireBadge } from './TimingTower';
 import { IconSwap, IconWarning } from './icons';
 
 const ERS_ORDER: ErsMode[] = ['harvest', 'balanced', 'hotlap', 'overtake'];
+const ERS_SHORT: Record<ErsMode, string> = { harvest: 'CARGA', balanced: 'BAL', hotlap: 'HOT', overtake: 'OT' };
+const ERS_HINT: Record<ErsMode, string> = {
+    harvest: 'Recarga batería (pierdes un poco de ritmo).',
+    balanced: 'Sostenible: sin bonus, recarga lenta.',
+    hotlap: 'Ritmo extra constante, gasta batería.',
+    overtake: 'Máximo empujón para atacar, vacía la batería.',
+};
 
 // Muro de boxes: paradas, dial de ritmo, ERS y órdenes de equipo del jugador.
 export const PitControls = ({ race, playerTeamId, drivers, onQueuePit, onPaceMode, onErsMode, onSwap }: {
@@ -140,10 +147,11 @@ export const PitControls = ({ race, playerTeamId, drivers, onQueuePit, onPaceMod
                                                             : 'bg-card-darker border-border-dark text-text-sub hover:text-text-main'
                                                     }`}
                                                 >
-                                                    {m === 'overtake' ? 'OT' : m === 'balanced' ? 'BAL' : m === 'harvest' ? 'CARGA' : 'HOT'}
+                                                    {ERS_SHORT[m]}
                                                 </button>
                                             ))}
                                         </div>
+                                        <p className="text-[10px] text-text-dim mt-1 leading-snug">{ERS_HINT[car.ersMode]}</p>
                                     </div>
                                 </div>
                             )}

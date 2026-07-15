@@ -4,6 +4,7 @@ import { useGame } from '../context/GameContext';
 import { CIRCUITS } from '../data/circuits';
 import { money } from './ui';
 import { IconHome, IconTrophy, IconWrench, IconHelmet, IconWallet, IconSettings } from './icons';
+import { Glossary } from './Glossary';
 
 const NAV = [
     { to: '/dashboard', Icon: IconHome, label: 'Inicio' },
@@ -18,6 +19,7 @@ const SettingsMenu = () => {
     const navigate = useNavigate();
     const [open, setOpen] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
+    const [showHelp, setShowHelp] = useState(false);
 
     const close = () => { setOpen(false); setConfirmDelete(false); };
 
@@ -35,10 +37,16 @@ const SettingsMenu = () => {
                     <div className="fixed inset-0 z-40" onClick={close} />
                     <div className="absolute right-0 top-8 z-50 bg-card-dark border border-border-dark rounded-xl shadow-lg py-1 w-52">
                         <button
+                            onClick={() => { setOpen(false); setShowHelp(true); }}
+                            className="w-full text-left px-4 py-2 text-sm hover:bg-card-darker"
+                        >
+                            Cómo se juega
+                        </button>
+                        <button
                             onClick={() => { close(); navigate('/'); }}
                             className="w-full text-left px-4 py-2 text-sm hover:bg-card-darker"
                         >
-                            🏁 Nueva partida
+                            Nueva partida
                         </button>
                         {confirmDelete ? (
                             <button
@@ -52,12 +60,13 @@ const SettingsMenu = () => {
                                 onClick={() => setConfirmDelete(true)}
                                 className="w-full text-left px-4 py-2 text-sm text-danger hover:bg-card-darker"
                             >
-                                🗑️ Borrar partida
+                                Borrar partida
                             </button>
                         )}
                     </div>
                 </>
             )}
+            {showHelp && <Glossary onClose={() => setShowHelp(false)} />}
         </div>
     );
 };

@@ -25,6 +25,8 @@ export const TimingTower = ({ race, teams, drivers, playerTeamId }: {
     playerTeamId: string;
 }) => {
     const leader = race.cars.find(c => c.status === 'running');
+    const ersSet = new Set(race.ersDrivers);   // desplegando ERS 'overtake' esta vuelta
+    const drsSet = new Set(race.drsDrivers);   // con DRS esta vuelta
     let prevRunningTime: number | null = null; // tiempo del coche de delante (para el intervalo)
 
     return (
@@ -53,6 +55,11 @@ export const TimingTower = ({ race, teams, drivers, playerTeamId }: {
                         <span className="w-1 h-6 rounded-full shrink-0" style={{ background: team.color }} />
                         <span className={`font-display font-bold text-base tracking-wide w-11 ${hasFL ? 'text-fastest-purple' : ''}`}>{driver.shortCode}</span>
                         {!dnf && <TireBadge compound={car.compound} age={car.tireAge} />}
+                        {!dnf && (
+                            <span className="w-3.5 h-1.5 rounded-full bg-card-dark overflow-hidden shrink-0" title="Batería ERS">
+                                <span className="block h-full rounded-full" style={{ width: `${Math.round(car.ers * 100)}%`, background: car.ers > 0.25 ? '#22e07a' : '#ffd12e' }} />
+                            </span>
+                        )}
                         <span className={`flex-1 text-right font-display tabular-nums text-[11px] ${hasFL ? 'text-fastest-purple font-bold' : 'text-text-sub'}`}>
                             {!dnf && car.lastLap > 0 ? formatLapTime(car.lastLap) : ''}
                         </span>
@@ -74,6 +81,10 @@ export const TimingTower = ({ race, teams, drivers, playerTeamId }: {
                                 <span className="font-display text-pit-yellow text-[10px] font-bold animate-pulse">BOX</span>
                             ) : car.penaltySec > 0 && !dnf ? (
                                 <span className="font-display text-danger text-[10px] font-bold">+{car.penaltySec}s</span>
+                            ) : !dnf && ersSet.has(car.driverId) ? (
+                                <span className="font-display text-weather-blue text-[10px] font-bold animate-pulse">OT</span>
+                            ) : !dnf && drsSet.has(car.driverId) ? (
+                                <span className="font-display text-gap-green text-[10px] font-bold">DRS</span>
                             ) : null}
                         </span>
                     </div>

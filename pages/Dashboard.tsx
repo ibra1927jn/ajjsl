@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useActiveGame } from '../context/GameContext';
 import { CIRCUITS } from '../data/circuits';
+import { EventChoice } from '../types';
 import { carPerformance } from '../engine/performance';
 import { computeDriverStandings, computeTeamStandings } from '../engine/season';
 import { generateMissions } from '../engine/missions';
@@ -9,10 +10,25 @@ import { Button, Card, SectionTitle, StatBar, money, triColor } from '../compone
 import { IconChevronRight } from '../components/icons';
 import { TraitBadges } from '../components/TraitBadges';
 
+// Chips de efecto de una opción de evento (presupuesto/junta/moral).
+const EffectChips = ({ choice }: { choice: EventChoice }) => {
+    const chips: { text: string; cls: string }[] = [];
+    if (choice.budget) chips.push({ text: `${choice.budget > 0 ? '+' : ''}${money(choice.budget)}`, cls: choice.budget > 0 ? 'text-gap-green' : 'text-danger' });
+    if (choice.patience) chips.push({ text: `${choice.patience > 0 ? '+' : ''}${choice.patience} junta`, cls: choice.patience > 0 ? 'text-gap-green' : 'text-danger' });
+    if (choice.moraleAll) chips.push({ text: `${choice.moraleAll > 0 ? '+' : ''}${choice.moraleAll} moral`, cls: choice.moraleAll > 0 ? 'text-gap-green' : 'text-danger' });
+    if (chips.length === 0) chips.push({ text: 'sin efecto', cls: 'text-text-dim' });
+    return (
+        <span className="flex flex-wrap gap-x-2 gap-y-0.5 mt-1">
+            {chips.map((c, i) => <span key={i} className={`text-[10px] font-bold tabular-nums ${c.cls}`}>{c.text}</span>)}
+        </span>
+    );
+};
+
 export const Dashboard = () => {
     const { game, dispatch } = useActiveGame();
     const navigate = useNavigate();
     const player = game.teams[game.playerTeamId];
+    const [eventResult, setEventResult] = useState<string | null>(null);
     const nextCircuit = game.phase === 'preRace' ? CIRCUITS[game.raceIndex] : null;
     const missions = nextCircuit ? generateMissions(game.season, game.raceIndex, game.playerTeamId, game.teams) : [];
 
@@ -35,6 +51,13 @@ export const Dashboard = () => {
                 </div>
             </div>
 
+            {eventResult && !game.pendingEvent && (
+                <Card accent="#22e07a" className="flex items-center justify-between gap-3">
+                    <p className="text-sm text-text-sub">{eventResult}</p>
+                    <button onClick={() => setEventResult(null)} className="text-xs text-text-dim underline hover:text-text-main shrink-0">ok</button>
+                </Card>
+            )}
+
             {game.pendingEvent && (
                 <Card accent="#ffd12e">
                     <p className="text-[11px] font-bold uppercase tracking-widest text-pit-yellow mb-1">
@@ -43,9 +66,12 @@ export const Dashboard = () => {
                     <p className="text-sm mb-3">{game.pendingEvent.prompt}</p>
                     <div className="space-y-2">
                         {game.pendingEvent.choices.map((c, i) => (
-                            <Button key={i} variant="ghost" size="block" onClick={() => dispatch({ type: 'RESOLVE_EVENT', choiceIndex: i })}>
-                                {c.label}
-                            </Button>
+                            <button key={i}
+                                onClick={() => { setEventResult(c.outcome); dispatch({ type: 'RESOLVE_EVENT', choiceIndex: i }); }}
+                                className="w-full text-left px-4 py-2.5 rounded-xl bg-card-2 border border-border-dark hover:border-f1-red transition-colors">
+                                <span className="font-semibold text-sm">{c.label}</span>
+                                <EffectChips choice={c} />
+                            </button>
                         ))}
                     </div>
                 </Card>
