@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { IconChevronRight } from './icons';
 
 // ===== Superficies =====
 
@@ -16,24 +17,43 @@ export const Card = ({ children, className = '', accent, hero = false }: {
     </div>
 );
 
-// Panel del HUD: superficie con cabecera opcional.
-export const Panel = ({ title, right, children, className = '', bodyClass = '' }: {
+// Panel del HUD: superficie con cabecera opcional. Con `collapsible` se pliega
+// SOLO en móvil (en lg siempre abierto), para acortar el scroll del HUD.
+export const Panel = ({ title, icon, right, children, className = '', bodyClass = '', collapsible = false, defaultOpen = true }: {
     title?: React.ReactNode;
+    icon?: React.ReactNode;
     right?: React.ReactNode;
     children: React.ReactNode;
     className?: string;
     bodyClass?: string;
-}) => (
-    <div className={`bg-card-darker border border-border-dark rounded-2xl overflow-hidden ${className}`}>
-        {title && (
-            <div className="flex items-center justify-between px-3 py-2 border-b border-border-dark/70">
-                <span className="font-display text-xs font-bold uppercase tracking-widest text-text-sub">{title}</span>
-                {right}
-            </div>
-        )}
-        <div className={bodyClass}>{children}</div>
-    </div>
-);
+    collapsible?: boolean;
+    defaultOpen?: boolean;
+}) => {
+    const [open, setOpen] = useState(defaultOpen);
+    return (
+        <div className={`bg-card-darker border border-border-dark rounded-2xl overflow-hidden ${className}`}>
+            {title && (
+                <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-border-dark/70">
+                    <span className="flex items-center gap-2 min-w-0">
+                        {icon}
+                        <span className="font-display text-xs font-bold uppercase tracking-widest text-text-sub truncate">{title}</span>
+                    </span>
+                    <span className="flex items-center gap-2 shrink-0">
+                        {right}
+                        {collapsible && (
+                            <button onClick={() => setOpen(o => !o)} aria-label={open ? 'Plegar' : 'Desplegar'}
+                                className="lg:hidden text-text-sub hover:text-text-main transition-transform"
+                                style={{ transform: open ? 'rotate(90deg)' : 'none' }}>
+                                <IconChevronRight size={16} />
+                            </button>
+                        )}
+                    </span>
+                </div>
+            )}
+            <div className={`${collapsible && !open ? 'hidden lg:block' : ''} ${bodyClass}`}>{children}</div>
+        </div>
+    );
+};
 
 // ===== Botones =====
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { RaceEvent, RaceEventType } from '../types';
+import { Panel } from './ui';
 import { IconSwap, IconPit, IconWarning, IconFlag, IconGauge, IconWeather, IconRadio, IconChevronRight } from './icons';
 
 const COLORS: Record<RaceEventType, string> = {
@@ -37,12 +38,10 @@ export const EventFeed = ({ events }: { events: RaceEvent[] }) => {
     useEffect(() => { prevCount.current = events.length; });
 
     return (
-        <div className="bg-card-darker rounded-2xl border border-border-dark h-64 lg:h-full overflow-hidden flex flex-col">
-            <div className="flex items-center gap-2 px-3 py-2 border-b border-border-dark/70">
-                <IconRadio size={15} className="text-text-sub" />
-                <span className="font-display text-xs font-bold uppercase tracking-widest text-text-sub">Directo</span>
-            </div>
-            <div className="flex-1 overflow-y-auto hide-scrollbar px-3 py-2 space-y-1.5">
+        <Panel title="Directo" collapsible icon={<IconRadio size={15} className="text-text-sub" />}
+            className="lg:h-full lg:flex lg:flex-col"
+            bodyClass="overflow-y-auto hide-scrollbar px-3 py-2 space-y-1.5 max-h-56 lg:max-h-none lg:flex-1">
+            <>
                 {recent.map((e, i) => {
                     const origIndex = events.length - 1 - i;
                     const isNew = origIndex >= prevCount.current;
@@ -55,7 +54,7 @@ export const EventFeed = ({ events }: { events: RaceEvent[] }) => {
                         </div>
                     );
                 })}
-            </div>
-        </div>
+            </>
+        </Panel>
     );
 };

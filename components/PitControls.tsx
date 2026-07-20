@@ -1,8 +1,10 @@
 import React from 'react';
-import { Compound, Driver, ErsMode, PaceMode, RaceState } from '../types';
+import { Circuit, Compound, Driver, ErsMode, PaceMode, RaceState } from '../types';
 import { COMPOUNDS, ERS_MODES, PACE_MODES } from '../data/constants';
+import { strategyAdvice, StratAdvice } from '../engine/strategy';
 import { TireBadge } from './TimingTower';
-import { IconSwap, IconWarning } from './icons';
+import { Panel } from './ui';
+import { IconSwap, IconWarning, IconChevronRight } from './icons';
 
 const ERS_ORDER: ErsMode[] = ['harvest', 'balanced', 'hotlap', 'overtake'];
 const ERS_SHORT: Record<ErsMode, string> = { harvest: 'CARGA', balanced: 'BAL', hotlap: 'HOT', overtake: 'OT' };
@@ -12,10 +14,12 @@ const ERS_HINT: Record<ErsMode, string> = {
     hotlap: 'Ritmo extra constante, gasta batería.',
     overtake: 'Máximo empujón para atacar, vacía la batería.',
 };
+const TONE_CLS = { green: 'text-gap-green', yellow: 'text-pit-yellow', red: 'text-danger' };
 
-// Muro de boxes: paradas, dial de ritmo, ERS y órdenes de equipo del jugador.
-export const PitControls = ({ race, playerTeamId, drivers, onQueuePit, onPaceMode, onErsMode, onSwap }: {
+// Muro de boxes: paradas, dial de ritmo, ERS, estrategia y órdenes del jugador.
+export const PitControls = ({ race, circuit, playerTeamId, drivers, onQueuePit, onPaceMode, onErsMode, onSwap }: {
     race: RaceState;
+    circuit: Circuit;
     playerTeamId: string;
     drivers: Record<string, Driver>;
     onQueuePit: (driverId: string, compound: Compound | null) => void;
@@ -32,23 +36,29 @@ export const PitControls = ({ race, playerTeamId, drivers, onQueuePit, onPaceMod
     const swapReady = firstIdx >= 0 && firstIdx + 1 < running.length
         && running[firstIdx + 1].teamId === playerTeamId;
 
+    // Consejo del ingeniero de estrategia por coche (integrado en cada tarjeta).
+    const adviceMap = new Map<string, StratAdvice>(
+        (disabled ? [] : strategyAdvice(race, circuit, playerTeamId, id => drivers[id]?.shortCode ?? id)).map(a => [a.driverId, a]),
+    );
+
+    const swapBtn = (
+        <button
+            disabled={!swapReady || disabled}
+            onClick={onSwap}
+            className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-lg bg-card-dark border border-border-dark hover:border-f1-red transition-colors disabled:opacity-30"
+            title="Disponible cuando tus dos coches van seguidos en pista"
+        >
+            <IconSwap size={14} /> Intercambiar
+        </button>
+    );
+
     return (
-        <div className="bg-card-darker rounded-2xl border border-border-dark overflow-hidden">
-            <div className="flex items-center justify-between px-3 py-2 border-b border-border-dark/70">
-                <span className="font-display text-xs font-bold uppercase tracking-widest text-text-sub">Muro de boxes</span>
-                <button
-                    disabled={!swapReady || disabled}
-                    onClick={onSwap}
-                    className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-lg bg-card-dark border border-border-dark hover:border-f1-red transition-colors disabled:opacity-30"
-                    title="Disponible cuando tus dos coches van seguidos en pista"
-                >
-                    <IconSwap size={14} /> Intercambiar
-                </button>
-            </div>
+        <Panel title="Muro de boxes" right={swapBtn}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3">
                 {playerCars.map(car => {
                     const driver = drivers[car.driverId];
                     const pos = running.indexOf(car);
+                    const advice = adviceMap.get(car.driverId);
                     return (
                         <div key={car.driverId} className="bg-card-dark rounded-xl p-3 border border-border-dark">
                             <div className="flex items-center justify-between mb-2.5">
@@ -153,12 +163,44 @@ export const PitControls = ({ race, playerTeamId, drivers, onQueuePit, onPaceMod
                                         </div>
                                         <p className="text-[10px] text-text-dim mt-1 leading-snug">{ERS_HINT[car.ersMode]}</p>
                                     </div>
+                                    {advice && (
+                                        <div className="pt-2.5 border-t border-border-dark/60">
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <p className="text-[10px] font-bold uppercase tracking-wider text-text-dim">Estrategia</p>
+                                                {advice.boxNow && (
+                                                    <span className="font-display text-[10px] font-bold uppercase tracking-wider text-pit-yellow bg-pit-yellow/15 rounded px-1.5 py-0.5 animate-pulse">Box esta vuelta</span>
+                                                )}
+                                            </div>
+                                            <div className="h-1.5 rounded-full bg-card-darker overflow-hidden mb-1.5">
+                                                {(() => {
+                                                    const pct = Math.max(0, Math.min(100, (1 - advice.tireAge / advice.life) * 100));
+                                                    return <div className="h-full rounded-full" style={{ width: `${pct}%`, background: pct > 40 ? '#22e07a' : pct > 15 ? '#ffd12e' : '#ff4d4d' }} />;
+                                                })()}
+                                            </div>
+                                            <p className={`text-[11px] font-semibold ${TONE_CLS[advice.tone]}`}>{advice.headline}</p>
+                                            {advice.threat && (
+                                                <p className="flex items-center gap-1 text-[10px] text-incident-orange mt-0.5">
+                                                    <IconWarning size={11} className="shrink-0" /> {advice.threat}
+                                                </p>
+                                            )}
+                                            {advice.opportunity && (
+                                                <p className="flex items-center gap-1 text-[10px] text-gap-green mt-0.5">
+                                                    <IconChevronRight size={11} className="shrink-0" /> {advice.opportunity}
+                                                </p>
+                                            )}
+                                            {advice.needsCompound && (
+                                                <p className="flex items-center gap-1 text-[10px] text-weather-blue mt-0.5">
+                                                    <IconWarning size={11} className="shrink-0" /> Regla: aún falta un 2º compuesto
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
                     );
                 })}
             </div>
-        </div>
+        </Panel>
     );
 };

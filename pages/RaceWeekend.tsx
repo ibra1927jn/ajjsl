@@ -18,7 +18,6 @@ import { useRaceSim } from '../hooks/useRaceSim';
 import { TimingTower } from '../components/TimingTower';
 import { EventFeed } from '../components/EventFeed';
 import { PitControls } from '../components/PitControls';
-import { StrategyEngineer } from '../components/StrategyEngineer';
 import { TrackMap } from '../components/TrackMap';
 import { Button, Card, SectionTitle, StatusPill, formatLapTime, money } from '../components/ui';
 import { IconPlay, IconPause } from '../components/icons';
@@ -482,10 +481,9 @@ const SessionRunner = ({ kind, grid, circuit, teams, drivers, playerTeamId, seed
                     <TrackMap race={race} teams={teams} drivers={drivers} playerTeamId={playerTeamId}
                         tickMs={TICK_SPEEDS[speedIdx].ms} paused={paused} avgLapSec={circuit.baseLapSec} />
                 </div>
-                <div className="lg:col-span-2 lg:row-start-1 lg:col-start-4 order-2 space-y-3">
-                    <PitControls race={race} playerTeamId={playerTeamId} drivers={drivers}
+                <div className="lg:col-span-2 lg:row-start-1 lg:col-start-4 order-2">
+                    <PitControls race={race} circuit={circuit} playerTeamId={playerTeamId} drivers={drivers}
                         onQueuePit={queuePit} onPaceMode={setPaceMode} onErsMode={setErsMode} onSwap={requestSwap} />
-                    {!finished && <StrategyEngineer race={race} circuit={circuit} drivers={drivers} playerTeamId={playerTeamId} />}
                 </div>
                 <div className="lg:col-span-3 lg:row-start-2 lg:col-start-1 order-3">
                     <TimingTower race={race} teams={teams} drivers={drivers} playerTeamId={playerTeamId} />

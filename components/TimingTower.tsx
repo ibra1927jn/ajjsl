@@ -1,7 +1,7 @@
 import React from 'react';
 import { Driver, RaceState, Team } from '../types';
 import { COMPOUNDS } from '../data/constants';
-import { formatGap, formatLapTime } from './ui';
+import { Panel, formatGap, formatLapTime } from './ui';
 
 export const TireBadge = ({ compound, age }: { compound: keyof typeof COMPOUNDS; age?: number }) => {
     const spec = COMPOUNDS[compound];
@@ -30,10 +30,7 @@ export const TimingTower = ({ race, teams, drivers, playerTeamId }: {
     let prevRunningTime: number | null = null; // tiempo del coche de delante (para el intervalo)
 
     return (
-        <div className="bg-card-darker rounded-2xl border border-border-dark overflow-hidden">
-            <div className="flex items-center gap-2 px-3 py-2 border-b border-border-dark/70">
-                <span className="font-display text-xs font-bold uppercase tracking-widest text-text-sub">Clasificación en vivo</span>
-            </div>
+        <Panel title="Clasificación en vivo" collapsible>
             {race.cars.map((car, i) => {
                 const driver = drivers[car.driverId];
                 const team = teams[car.teamId];
@@ -90,6 +87,6 @@ export const TimingTower = ({ race, teams, drivers, playerTeamId }: {
                     </div>
                 );
             })}
-        </div>
+        </Panel>
     );
 };
